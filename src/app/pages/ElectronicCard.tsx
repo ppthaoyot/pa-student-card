@@ -183,8 +183,8 @@ const ElectronicCardPage = () => {
                 ctx.font = "bold 42px 'Sarabun', sans-serif";
                 ctx.fillStyle = "#ffffff";
                 ctx.textAlign = "center";
-                // พิกัดกึ่งกลางแนวนอน และความสูงของแถบแบนเนอร์ที่ y = 295
-                ctx.fillText(activeSchool, canvas.width / 2, 295);
+                // The blue banner is roughly centered horizontally, and its vertical center is at y = 322
+                ctx.fillText(activeSchool, canvas.width / 2, 322);
 
                 // 7.3 โหลดภาพ QR Code เพื่อนำมาวาดรวมกัน
                 const qrImg = new Image();
@@ -461,7 +461,7 @@ const ElectronicCardPage = () => {
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: "bold" }}>Gen QR Code</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            โรงเรียน{activeSchool} ต.{schoolDetails.subDistrict} อ.{schoolDetails.district} จ.{schoolDetails.province}
+                            {activeSchool} ต.{schoolDetails.subDistrict} อ.{schoolDetails.district} จ.{schoolDetails.province}
                         </Typography>
                     </Box>
                     <IconButton onClick={() => setQrModalOpen(false)}>
@@ -489,7 +489,7 @@ const ElectronicCardPage = () => {
                         <Box
                             sx={{
                                 position: "absolute",
-                                top: "98px",
+                                top: "107px",
                                 left: "50%",
                                 transform: "translateX(-50%)",
                                 width: "240px",
