@@ -60,8 +60,7 @@ const StudentCard = () => {
         });
 
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = "/template-card.png"; // ใช้ภาพบัตรประกันเปล่าจากโฟลเดอร์ public
+        img.src = `${import.meta.env.BASE_URL}template-card.png`; // ดึง path ตาม Base URL ของระบบ
         img.onload = () => {
             const canvas = document.createElement("canvas");
             canvas.width = 838;  // ขนาดพิกเซลจริงของหน้าบัตรต้นฉบับกว้าง
@@ -191,7 +190,7 @@ const StudentCard = () => {
                     sx={{
                         width: "100%",
                         aspectRatio: "838 / 531", // รักษาสัดส่วนการ์ดให้คมชัดและขนาดพอดีกับรูปภาพจริงเสมอ
-                        backgroundImage: "url('/template-card.png')",
+                        backgroundImage: `url('${import.meta.env.BASE_URL}template-card.png')`,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                         borderRadius: 3,

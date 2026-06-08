@@ -43,7 +43,7 @@ export const ASideMenuList = () => {
             <ASideMenuListContainer dense aria-labelledby="nested-list-subheader">
                 <ASideMenuListTopMenu />
                 <MenuItem path="/" icon="home" text="หน้าแรก" permissions={[]} />
-                <MenuItem path="/electronic-card" icon="credit-card" text="บัตรประกันภัยอิเล็กทรอนิกส์" permissions={[]} />
+                <MenuItem path="/electronic-card" icon="credit_card" text="บัตรประกันภัยอิเล็กทรอนิกส์" permissions={[]} />
             </ASideMenuListContainer>
         </ASideMenuListDrawer>
     );

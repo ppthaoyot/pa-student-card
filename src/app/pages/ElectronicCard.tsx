@@ -168,8 +168,7 @@ const ElectronicCardPage = () => {
         });
 
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = "/template-bg-qr-code.png"; // ไฟล์เทมเพลตโปสเตอร์ว่างในโฟลเดอร์ public
+        img.src = `${import.meta.env.BASE_URL}template-bg-qr-code.png`; // ดึง path ตาม Base URL ของระบบ
         img.onload = () => {
             const canvas = document.createElement("canvas");
             canvas.width = img.naturalWidth;   // ขนาดจริงของภาพ 1080px
@@ -478,7 +477,7 @@ const ElectronicCardPage = () => {
                             width: "360px",
                             height: "450px",
                             position: "relative",
-                            backgroundImage: "url('/template-bg-qr-code.png')",
+                            backgroundImage: `url('${import.meta.env.BASE_URL}template-bg-qr-code.png')`,
                             backgroundSize: "cover",
                             backgroundPosition: "center",
                             borderRadius: 2,
