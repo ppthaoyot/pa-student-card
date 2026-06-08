@@ -1,74 +1,82 @@
-import React, { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     Box,
     Paper,
     TextField,
     Button,
     Typography,
-    Divider,
-    Tabs,
-    Tab,
     AppBar,
     IconButton
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import CreditCardIcon from "@mui/icons-material/CreditCard";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import DownloadIcon from "@mui/icons-material/Download";
+import ShareIcon from "@mui/icons-material/Share";
 import Swal from "sweetalert2";
 
 import { searchStudents, Student } from "../modules/_common/mockStudentData";
 import MobileFooter from "../modules/_common/components/MobileFooter";
 
-// --- อินเตอร์เฟสสำหรับควบคุมการแสดงผลของแต่ละแท็บ ---
-interface TabPanelProps {
-    children?: React.ReactNode;
-    index: number;
-    value: number;
-}
+/**
+ * ฟังก์ชันช่วยแปลงข้อมูลเลขบัตรประชาชนให้อยู่ในรูปแบบที่แสดงบางส่วน (Masked)
+ * ตัวอย่าง: 1234567890123 -> 1-2345-xxxxx-23-4
+ */
+const maskCitizenId = (id: string) => {
+    if (id.length !== 13) return id;
+    return `${id.slice(0, 1)}-${id.slice(1, 5)}-xxxxx-${id.slice(10, 12)}-${id.slice(12)}`;
+};
 
 /**
- * คอมโพเนนต์ช่วยสลับเนื้อหาภายในแท็บ
+ * ค้นหาข้อมูลที่อยู่ของโรงเรียนแบบไดนามิกเพื่อนำมาแสดงผลเป็น Subtitle
  */
-function CustomTabPanel(props: TabPanelProps) {
-    const { children, value, index, ...other } = props;
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`simple-tabpanel-${index}`}
-            aria-labelledby={`simple-tab-${index}`}
-            {...other}
-        >
-            {value === index && (
-                <Box sx={{ p: 2 }}>
-                    {children}
-                </Box>
-            )}
-        </div>
-    );
-}
+const getSchoolSubtitle = (schoolName: string) => {
+    if (schoolName.includes("สตรีศรีน่าน")) {
+        return "ตำบลในเวียง อำเภอเมืองน่าน จังหวัดน่าน";
+    } else if (schoolName.includes("ก้อนแก้ว")) {
+        return "ตำบลก้อนแก้ว อำเภอคลองเขื่อน จังหวัดฉะเชิงเทรา";
+    } else if (schoolName.includes("สีคิ้ว")) {
+        return "ตำบลสีคิ้ว อำเภอสีคิ้ว จังหวัดนครราชสีมา";
+    }
+    return "ตำบลในเวียง อำเภอเมืองน่าน จังหวัดน่าน";
+};
 
 /**
  * หน้าจอค้นหาข้อมูลบัตรประกันภัยของนักเรียน (Mobile Web View - Public Route)
- * ฟังก์ชันหลัก:
- * 1. คัดกรองข้อมูลตามพารามิเตอร์โรงเรียนจาก URL (เช่น `?school=โรงเรียนสตรีศรีน่าน`)
- * 2. ป้อนเลขบัตรประชาชน 13 หลักเพื่อค้นหาประวัติการทำประกัน
- * 3. แสดงรายละเอียดสิทธิประโยชน์เมื่อพบข้อมูล (แท็บข้อมูลส่วนตัว และแท็บวงเงินคุ้มครอง)
- * 4. ปุ่มนำทางเพื่อกดเปิดดูภาพบัตรประกันแบบดิจิทัล
+ * ปรับปรุงใหม่ตามสไตล์การจัดวางและโค้ด CSS ของ Figma:
+ * 1. แสดงผลชื่อโรงเรียนและที่อยู่ด้านบนสุดของแบบฟอร์ม
+ * 2. ป้อนเลขบัตรประชาชนเพื่อค้นหาข้อมูลประกันภัย
+ * 3. เมื่อค้นหาพบข้อมูล จะแสดงภาพบัตรจริง ซ้อนทับรายละเอียดแบบ Responsive 
+ * 4. มีปุ่มวงกลมสำหรับ "บันทึกรูปบัตร" (Canvas render ดาวน์โหลด) และปุ่ม "แชร์"
+ * 5. แสดงตารางข้อมูลผู้เอาประกันแยกรายละเอียดตามข้อกำหนดในฟิกม่า
  */
 const StudentSearch = () => {
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
     
-    // ดึงค่าชื่อโรงเรียนจาก URL Query Parameter (หากนักเรียนสแกนจากป้ายหน้าโรงเรียน)
-    const urlSchool = searchParams.get("school") || "";
+    // ดึงค่าชื่อโรงเรียนจาก URL Query Parameter (ค่าเริ่มต้นคือ โรงเรียนสตรีศรีน่าน)
+    const urlSchool = searchParams.get("school") || "โรงเรียนสตรีศรีน่าน";
+    const schoolSubtitle = getSchoolSubtitle(urlSchool);
 
     // --- State การทำงาน ---
     const [citizenId, setCitizenId] = useState<string>("");
     const [foundStudent, setFoundStudent] = useState<Student | null>(null);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<number>(0);
+
+    // ดึงเลขบัตรประชาชนจาก URL Query Parameter (หากมาจากปุ่มแชร์)
+    useEffect(() => {
+        const urlCitizenId = searchParams.get("citizenId");
+        if (urlCitizenId && urlCitizenId.length === 13) {
+            setCitizenId(urlCitizenId);
+            const results = searchStudents({
+                citizenId: urlCitizenId,
+                schoolName: urlSchool || undefined
+            });
+            if (results.length > 0) {
+                setFoundStudent(results[0]);
+                setHasSearched(true);
+            }
+        }
+    }, [searchParams, urlSchool]);
 
     // ฟังก์ชันประมวลผลการค้นหาด้วยเลขประจำตัวประชาชน
     const handleSearch = (e: React.FormEvent) => {
@@ -83,7 +91,6 @@ const StudentSearch = () => {
             return;
         }
 
-        // ค้นหาในฐานข้อมูลจำลอง (Mock Database) โดยกรองด้วยเลขบัตรประชาชน และโรงเรียน (ถ้ามีระบุใน URL)
         const results = searchStudents({
             citizenId: citizenId.trim(),
             schoolName: urlSchool || undefined
@@ -99,7 +106,7 @@ const StudentSearch = () => {
                 icon: "error",
                 title: "ไม่พบข้อมูลบัตรประกันภัย",
                 text: "กรุณาตรวจสอบเลขประจำตัวประชาชนใหม่อีกครั้ง หรือติดต่อโรงเรียนหากมีข้อสงสัย",
-                confirmButtonColor: "#07518c"
+                confirmButtonColor: "#03A9F4"
             });
         }
     };
@@ -111,249 +118,537 @@ const StudentSearch = () => {
         setCitizenId("");
     };
 
+    // ฟังก์ชันประมวลผลการวาดรายละเอียดลงบนบัตรเปล่าผ่าน Canvas และสั่งดาวน์โหลด
+    const handleDownloadCard = () => {
+        if (!foundStudent) return;
+
+        Swal.fire({
+            title: "กำลังเตรียมดาวน์โหลด...",
+            text: "กรุณารอซักครู่",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        const img = new Image();
+        img.src = `${import.meta.env.BASE_URL}template-card.png`;
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 838;
+            canvas.height = 531;
+            const ctx = canvas.getContext("2d");
+            
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                ctx.fillStyle = "#000000";
+                ctx.textAlign = "left";
+                
+                const setFont = (size: number, isBold: boolean = false) => {
+                    ctx.font = `${isBold ? "bold" : "normal"} ${size}px 'Sarabun', sans-serif`;
+                };
+
+                const xLeft = 80;
+                setFont(15, true);
+                ctx.fillText(`เลขอ้างอิง : ${foundStudent.refNo}`, xLeft, 150);
+                
+                setFont(15, true);
+                ctx.fillText(`ผู้ถือกรมธรรม์ : ${foundStudent.schoolName}`, xLeft, 192);
+
+                setFont(15, true);
+                ctx.fillText(`ระดับการศึกษา : ${foundStudent.gradeLevel}`, xLeft, 234);
+
+                setFont(15, true);
+                ctx.fillText(`ชื่อผู้เอาประกัน : ${foundStudent.title}${foundStudent.firstName} ${foundStudent.lastName}`, xLeft, 276);
+
+                setFont(15, true);
+                ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 318);
+
+                ctx.textAlign = "center";
+                ctx.fillStyle = "#07518c";
+                setFont(21, true);
+                ctx.fillText(`วงเงินค่ารักษาพยาบาล : ${foundStudent.coverageLimit} บาท/ต่ออุบัติเหตุแต่ละครั้ง`, canvas.width / 2, 368);
+
+                setFont(12.5, true);
+                ctx.fillText(
+                    `(กรณีไม่เรียกร้องผลประโยชน์ค่ารักษาพยาบาล OPD อนามัย ${foundStudent.compensationOPDClinic} บาท OPD ${foundStudent.compensationOPDHospital} บาท IPD ${foundStudent.compensationIPD} บาท/ต่ออุบัติเหตุแต่ละครั้ง)`,
+                    canvas.width / 2,
+                    405
+                );
+
+                ctx.fillStyle = "#000000";
+                ctx.textAlign = "left";
+                setFont(14.5, true);
+                ctx.fillText(`วันที่มีผลบังคับ : ${foundStudent.effectiveDate}`, 180, 446);
+                ctx.fillText(`วันที่สิ้นสุด : ${foundStudent.expiryDate}`, 425, 446);
+
+                ctx.fillStyle = "#333333";
+                setFont(11.5, true);
+                ctx.fillText(`บริษัทผู้รับประกัน : ${foundStudent.insurer}`, 36, 498);
+
+                const dataUrl = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.download = `PA_Card_${foundStudent.firstName}.png`;
+                link.href = dataUrl;
+                link.click();
+                Swal.close();
+            }
+        };
+        img.onerror = () => {
+            Swal.close();
+            Swal.fire({
+                icon: "error",
+                title: "ดาวน์โหลดล้มเหลว",
+                text: "ไม่สามารถโหลดรูปภาพพื้นหลังบัตรได้"
+            });
+        };
+    };
+
+    // ฟังก์ชันแชร์ลิงก์ข้อมูลบัตรประกันภัย
+    const handleShareCard = () => {
+        if (!foundStudent) return;
+        
+        const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(foundStudent.schoolName)}&citizenId=${foundStudent.citizenId}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: `บัตรประกันภัย PA ของ ${foundStudent.firstName}`,
+                text: `คลิกตรวจสอบสิทธิ์และบัตรประกันภัย PA ของโรงเรียน ${foundStudent.schoolName}`,
+                url: shareUrl
+            }).catch(() => {
+                // fallback to clipboard
+                copyToClipboard(shareUrl);
+            });
+        } else {
+            copyToClipboard(shareUrl);
+        }
+    };
+
+    const copyToClipboard = (url: string) => {
+        navigator.clipboard.writeText(url);
+        Swal.fire({
+            icon: "success",
+            title: "คัดลอกลิงก์แชร์เรียบร้อยแล้ว!",
+            text: "คุณสามารถส่งต่อลิงก์นี้เพื่อใช้เปิดดูสิทธิ์บัตรได้ทันที",
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+
+    // รายการคอลัมน์ข้อมูลที่ต้องการแสดงล่างบัตร
+    const getDetailRows = (student: Student) => [
+        { label: "กรมธรรม์เลขที่ :", value: student.policyNo, isBlue: true },
+        { label: "เลขอ้างอิง :", value: student.refNo, isBlue: true },
+        { label: "สถานศึกษา :", value: student.schoolName, isBlue: false },
+        { label: "ประเภทแผน :", value: `แผนความคุ้มครอง (${student.coverageLimit} บาท)`, isBlue: false },
+        { label: "วันที่มีผลบังคับ :", value: student.effectiveDate, isBlue: false },
+        { label: "วันที่สิ้นสุด :", value: `${student.expiryDate}`, isBlue: false },
+        { label: "ชื่อผู้เอาประกัน :", value: `${student.title}${student.firstName} ${student.lastName}`, isBlue: true },
+        { label: "เลขบัตรประชาชน :", value: maskCitizenId(student.citizenId), isBlue: false }
+    ];
+
     return (
         <Box
             sx={{
                 minHeight: "100vh",
-                bgcolor: "#f5f8fa",
+                background: "linear-gradient(180deg, #E8F5FF 0%, #CBE8FF 100%)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                fontFamily: "Sarabun",
-                pb: "60px"
+                fontFamily: "'Prompt', 'Sarabun', sans-serif",
+                pb: "70px",
+                width: "100%"
             }}
         >
-            {/* ส่วนหัวของแอปพลิเคชันมือถือ */}
+            {/* ส่วนหัวแอปพลิเคชัน */}
             <AppBar position="static" sx={{ bgcolor: "#07518c", boxShadow: 1 }}>
                 <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Typography variant="h6" sx={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                    <Typography variant="h6" sx={{ fontWeight: "bold", fontSize: "1.1rem", fontFamily: "'Prompt', sans-serif" }}>
                         สยามสไมล์ ประกันภัยโรงเรียน
                     </Typography>
                 </Box>
             </AppBar>
 
-            {/* แบนเนอร์แสดงชื่อโรงเรียนต้นสังกัด */}
-            <Paper
-                elevation={1}
+            {/* คอนเทนเนอร์หลักความกว้างตาม Figma 500px */}
+            <Box
                 sx={{
-                    width: "90%",
-                    maxWidth: "450px",
+                    width: "100%",
+                    maxWidth: "500px",
+                    px: 2,
+                    boxSizing: "border-box",
                     mt: 3,
-                    p: 2,
-                    borderRadius: 2,
-                    bgcolor: "#e1effb",
-                    borderLeft: "5px solid #07518c"
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 3
                 }}
             >
-                <Typography variant="subtitle1" sx={{ fontWeight: "bold", color: "#07518c" }}>
-                    {urlSchool ? urlSchool : "ระบบสแกนบัตรประกันภัยออนไลน์"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    {urlSchool ? "โครงการโรงเรียนปลอดภัย" : "กรุณากรอกข้อมูลนักเรียนเพื่อเข้าถึงบัตรประจำตัวผู้เอาประกัน"}
-                </Typography>
-            </Paper>
-
-            {!hasSearched || !foundStudent ? (
-                // === ส่วนที่ 1: หน้าจอการค้นหา (ก่อนเจอข้อมูล) ===
-                <Box
-                    component="form"
-                    onSubmit={handleSearch}
+                {/* แบบฟอร์มการค้นหาหลัก (Frame 1000008428) */}
+                <Paper
+                    elevation={3}
                     sx={{
-                        width: "90%",
-                        maxWidth: "450px",
-                        mt: 3,
+                        p: 3,
+                        borderRadius: "10px",
+                        bgcolor: "#FFFFFF",
                         display: "flex",
                         flexDirection: "column",
-                        gap: 2
+                        alignItems: "center",
+                        boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.08)"
                     }}
                 >
-                    <Paper elevation={2} sx={{ p: 3, borderRadius: 3 }}>
-                        <Typography variant="body1" sx={{ fontWeight: "bold", mb: 2, textAlign: "center" }}>
-                            ค้นหาข้อมูลนักเรียน
-                        </Typography>
+                    {/* ชื่อโรงเรียน */}
+                    <Typography
+                        sx={{
+                            fontFamily: "'Prompt', 'Sarabun', sans-serif",
+                            fontWeight: 700,
+                            fontSize: "1.6rem",
+                            lineHeight: "2.1rem",
+                            color: "#000000",
+                            textAlign: "center",
+                            mb: 0.5
+                        }}
+                    >
+                        {urlSchool}
+                    </Typography>
 
-                        {/* กล่องกรอกเลขประจำตัวประชาชน จำกัดเฉพาะตัวเลข 13 หลัก */}
+                    {/* ที่อยู่ตำบล อำเภอ จังหวัด */}
+                    <Typography
+                        sx={{
+                            fontFamily: "'Prompt', 'Sarabun', sans-serif",
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            lineHeight: "1.3rem",
+                            color: "#000000",
+                            textAlign: "center",
+                            mb: 3
+                        }}
+                    >
+                        {schoolSubtitle}
+                    </Typography>
+
+                    {/* ช่องกรอกเลขบัตร */}
+                    <Box component="form" onSubmit={handleSearch} sx={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <TextField
                             fullWidth
-                            label="เลขบัตรประจำตัวประชาชน / Passport นักเรียน"
                             variant="outlined"
-                            placeholder="กรอกเลข 13 หลัก"
+                            placeholder="ค้นหาเลขบัตรประชาชน / Passport นักเรียน"
                             value={citizenId}
                             onChange={(e) => setCitizenId(e.target.value.replace(/\D/g, "").slice(0, 13))}
                             inputProps={{ maxLength: 13, inputMode: "numeric" }}
-                            sx={{ mb: 2 }}
+                            sx={{
+                                mb: 2,
+                                maxWidth: "398px",
+                                "& .MuiOutlinedInput-root": {
+                                    borderRadius: "6px",
+                                    height: "48px",
+                                    "& fieldset": {
+                                        borderColor: "#007AC1",
+                                    },
+                                    "&:hover fieldset": {
+                                        borderColor: "#005a8f",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                        borderColor: "#007AC1",
+                                        borderWidth: "1.5px"
+                                    }
+                                }
+                            }}
                         />
 
+                        {/* ปุ่มค้นหา (ความกว้าง 280px) */}
                         <Button
-                            fullWidth
                             type="submit"
                             variant="contained"
-                            size="large"
-                            startIcon={<SearchIcon />}
                             sx={{
-                                bgcolor: "#07518c",
-                                py: 1.5,
-                                borderRadius: 2,
+                                bgcolor: "#03A9F4",
+                                color: "#FFFFFF",
+                                width: "280px",
+                                height: "48px",
+                                borderRadius: "4px",
+                                fontSize: "1.2rem",
                                 fontWeight: "bold",
-                                "&:hover": { bgcolor: "#053e6d" }
+                                fontFamily: "'Prompt', sans-serif",
+                                boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.12), 0px 2px 2px rgba(0, 0, 0, 0.14)",
+                                "&:hover": {
+                                    bgcolor: "#0288d1"
+                                },
+                                mb: 1
                             }}
                         >
-                            ค้นหาข้อมูล
+                            ค้นหา
                         </Button>
-                    </Paper>
-
-                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center", px: 2 }}>
-                        * หมายเหตุ: ค้นหาข้อมูลนักเรียน กรุณาป้อนข้อมูลเลขประจำตัวประชาชน หรือเลขหนังสือเดินทาง / Passport นักเรียน
-                    </Typography>
-                </Box>
-            ) : (
-                // === ส่วนที่ 2: หน้าจอแสดงผลสัมฤทธิ์แยกประเภทการคุ้มครอง (เมื่อค้นพบตัวนักเรียน) ===
-                <Box
-                    sx={{
-                        width: "90%",
-                        maxWidth: "450px",
-                        mt: 2,
-                        mb: 4,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2
-                    }}
-                >
-                    {/* ปุ่มย้อนกลับสำหรับการค้นหาใหม่ */}
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <IconButton onClick={handleBack} sx={{ color: "#07518c" }}>
-                            <ArrowBackIcon />
-                        </IconButton>
-                        <Typography variant="body2" sx={{ fontWeight: "bold", color: "#07518c" }}>
-                            ย้อนกลับไปค้นหาใหม่
-                        </Typography>
                     </Box>
 
-                    {/* แผงควบคุมรายละเอียดการประกันภัยแบ่งแท็บ */}
-                    <Paper elevation={2} sx={{ borderRadius: 3, overflow: "hidden" }}>
-                        <Box sx={{ bgcolor: "#07518c", p: 2, color: "#ffffff", textAlign: "center" }}>
-                            <Typography variant="h6" sx={{ fontWeight: "bold", fontSize: "1rem" }}>
-                                {foundStudent.schoolName}
+                    {/* ส่วนแสดงสถานะการกรอกข้อมูล (ก่อนมีการกดค้นหาหรือเมื่อไม่พบผู้ประกันตน) */}
+                    {(!hasSearched || !foundStudent) && (
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                textAlign: "center",
+                                gap: 1.5,
+                                mt: 3
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: "56px",
+                                    height: "56px",
+                                    bgcolor: "#E2F2FF",
+                                    borderRadius: "100px",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center"
+                                }}
+                            >
+                                <SearchIcon sx={{ color: "#0093FF", fontSize: "32px" }} />
+                            </Box>
+                            <Typography sx={{ fontFamily: "'Prompt', sans-serif", fontWeight: 700, fontSize: "1.1rem", color: "#000000" }}>
+                                ค้นหาข้อมูลนักเรียน
+                            </Typography>
+                            <Typography sx={{ fontFamily: "'Prompt', sans-serif", fontWeight: 500, fontSize: "0.9rem", color: "#707070" }}>
+                                กรุณาป้อนข้อมูลในช่องค้นหาด้านบน
+                            </Typography>
+                            <Typography sx={{ fontFamily: "'Prompt', sans-serif", fontWeight: 500, fontSize: "0.9rem", color: "#707070" }}>
+                                สามารถค้นหาด้วยเลขบัตรประชาชน / Passport นักเรียน
+                            </Typography>
+                        </Box>
+                    )}
+                </Paper>
+
+                {/* ส่วนแสดงผลลัพธ์ (เมื่อค้นเจอข้อมูลนักเรียนสำเร็จ) */}
+                {hasSearched && foundStudent && (
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 3,
+                            width: "100%"
+                        }}
+                    >
+                        {/* ปุ่มย้อนกลับสไตล์สีฟ้า */}
+                        <Box sx={{ alignSelf: "flex-start", display: "flex", alignItems: "center" }}>
+                            <IconButton onClick={handleBack} sx={{ color: "#07518c" }}>
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <Typography variant="body2" onClick={handleBack} sx={{ fontWeight: "bold", color: "#07518c", cursor: "pointer" }}>
+                                ล้างผลลัพธ์และค้นหาใหม่
                             </Typography>
                         </Box>
 
-                        {/* การเปลี่ยนแถบการแสดงผล (ข้อมูลผู้ประกันตน / ความคุ้มครอง) */}
-                        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-                            <Tabs
-                                value={activeTab}
-                                onChange={(_, newValue) => setActiveTab(newValue)}
-                                variant="fullWidth"
-                                textColor="primary"
-                                indicatorColor="primary"
+                        {/* การ์ดดิจิทัลซ้อนตัวอักษร 16(New) */}
+                        <Paper
+                            elevation={4}
+                            sx={{
+                                width: "100%",
+                                maxWidth: "400px",
+                                aspectRatio: "838 / 531",
+                                backgroundImage: `url('${import.meta.env.BASE_URL}template-card.png')`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                                borderRadius: "8px",
+                                position: "relative",
+                                overflow: "hidden",
+                                boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)"
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    fontSize: "min(2.8vw, 12.5px)",
+                                    color: "#000000",
+                                    lineHeight: 1.2
+                                }}
                             >
-                                <Tab label="ข้อมูลผู้ประกันตน" sx={{ fontWeight: "bold" }} />
-                                <Tab label="สิทธิประโยชน์ความคุ้มครอง" sx={{ fontWeight: "bold" }} />
-                            </Tabs>
-                        </Box>
-
-                        {/* แท็บที่ 1: ข้อมูลผู้ประกันตน */}
-                        <CustomTabPanel value={activeTab} index={0}>
-                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">เลขที่ใบสมัคร:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>{foundStudent.applicationNo}</Typography>
-                                </Box>
-                                <Divider />
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">ชื่อ-นามสกุล:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                                        {foundStudent.title}{foundStudent.firstName} {foundStudent.lastName}
+                                {/* ข้อมูลข้อความต่างๆ ซ้อนทับการ์ด */}
+                                <Box sx={{ position: "absolute", left: "9.5%", top: "27.5%", display: "flex", flexDirection: "column", gap: "2%" }}>
+                                    <Typography sx={{ fontSize: "0.95em", fontWeight: "bold", fontFamily: "Sarabun" }}>
+                                        เลขอ้างอิง : <span style={{ fontWeight: "normal" }}>{foundStudent.refNo}</span>
                                     </Typography>
-                                </Box>
-                                <Divider />
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">ระดับชั้น:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                                        {foundStudent.gradeLevel}/{foundStudent.classroom}
+                                    <Typography sx={{ fontSize: "0.95em", fontWeight: "bold", fontFamily: "Sarabun", mt: "3px" }}>
+                                        ผู้ถือกรมธรรม์ : <span style={{ fontWeight: "normal" }}>{foundStudent.schoolName}</span>
                                     </Typography>
-                                </Box>
-                                <Divider />
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">สถานะความคุ้มครอง:</Typography>
-                                    <Typography variant="body2" color="success.main" sx={{ fontWeight: "bold" }}>
-                                        มีผลคุ้มครอง ({foundStudent.paymentStatus})
+                                    <Typography sx={{ fontSize: "0.95em", fontWeight: "bold", fontFamily: "Sarabun", mt: "3px" }}>
+                                        ระดับการศึกษา : <span style={{ fontWeight: "normal" }}>{foundStudent.gradeLevel}</span>
                                     </Typography>
-                                </Box>
-                                <Divider />
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">เลขกรมธรรม์:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>{foundStudent.policyNo}</Typography>
+                                    <Typography sx={{ fontSize: "0.95em", fontWeight: "bold", fontFamily: "Sarabun", mt: "3px" }}>
+                                        ชื่อผู้เอาประกัน : <span style={{ fontWeight: "normal" }}>{foundStudent.title}{foundStudent.firstName} {foundStudent.lastName}</span>
+                                    </Typography>
+                                    <Typography sx={{ fontSize: "0.95em", fontWeight: "bold", fontFamily: "Sarabun", mt: "3px" }}>
+                                        ผู้บริหารโครงการ : <span style={{ fontWeight: "normal", fontSize: "0.9em" }}>บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด</span>
+                                    </Typography>
                                 </Box>
 
-                                {/* ปุ่มกดเพื่อแสดงบัตรประกันภัยดิจิทัล */}
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    size="large"
-                                    startIcon={<CreditCardIcon />}
-                                    onClick={() => navigate(`/student/card/${foundStudent.citizenId}`)}
+                                {/* วงเงินคุ้มครอง */}
+                                <Box sx={{ position: "absolute", top: "69.5%", left: "50%", transform: "translateX(-50%)", width: "90%", textAlign: "center" }}>
+                                    <Typography sx={{ color: "#07518c", fontSize: "1.2em", fontWeight: "bold", fontFamily: "Sarabun" }}>
+                                        วงเงินค่ารักษาพยาบาล : {foundStudent.coverageLimit} บาท/ต่ออุบัติเหตุแต่ละครั้ง
+                                    </Typography>
+                                </Box>
+
+                                {/* ข้อความเพิ่มเติม */}
+                                <Box sx={{ position: "absolute", top: "76.5%", left: "50%", transform: "translateX(-50%)", width: "90%", textAlign: "center" }}>
+                                    <Typography sx={{ color: "#07518c", fontSize: "0.68em", fontWeight: "bold", fontFamily: "Sarabun" }}>
+                                        (กรณีไม่เรียกร้องผลประโยชน์ค่ารักษาพยาบาล OPD อนามัย {foundStudent.compensationOPDClinic} บาท OPD {foundStudent.compensationOPDHospital} บาท IPD {foundStudent.compensationIPD} บาท/ต่ออุบัติเหตุแต่ละครั้ง)
+                                    </Typography>
+                                </Box>
+
+                                {/* วันเริ่มต้นคุ้มครอง และวันหมดอายุ */}
+                                <Box sx={{ position: "absolute", bottom: "16.5%", left: "21%", right: "8%", display: "flex", justifyContent: "space-between" }}>
+                                    <Typography sx={{ fontSize: "0.85em", fontWeight: "bold", fontFamily: "Sarabun" }}>
+                                        วันที่มีผลบังคับ : <span style={{ fontWeight: "normal" }}>{foundStudent.effectiveDate}</span>
+                                    </Typography>
+                                    <Typography sx={{ fontSize: "0.85em", fontWeight: "bold", fontFamily: "Sarabun", mr: "4%" }}>
+                                        วันที่สิ้นสุด : <span style={{ fontWeight: "normal" }}>{foundStudent.expiryDate}</span>
+                                    </Typography>
+                                </Box>
+
+                                {/* ผู้รับประกัน */}
+                                <Box sx={{ position: "absolute", bottom: "6.5%", left: "4.5%", width: "70%" }}>
+                                    <Typography sx={{ color: "#333333", fontSize: "0.68em", fontWeight: "bold", fontFamily: "Sarabun" }}>
+                                        บริษัทผู้รับประกัน : {foundStudent.insurer}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Paper>
+
+                        {/* ปุ่มควบคุม Save & Share ดีไซน์แบบวงกลมพร้อมข้อความด้านล่างตามรูปที่ 2 */}
+                        <Box sx={{ display: "flex", justifyContent: "center", gap: 6, mt: 1 }}>
+                            {/* ปุ่มบันทึกรูปบัตร */}
+                            <Box
+                                onClick={handleDownloadCard}
+                                sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    cursor: "pointer",
+                                    "&:hover opacity": 0.85
+                                }}
+                            >
+                                <Box
                                     sx={{
-                                        mt: 2,
-                                        bgcolor: "#07518c",
-                                        borderRadius: 2.5,
-                                        fontWeight: "bold",
-                                        py: 1.2,
-                                        boxShadow: 2
+                                        width: "28px",
+                                        height: "28px",
+                                        background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)",
+                                        borderRadius: "100px",
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        boxShadow: "0px 2px 4px rgba(0,0,0,0.15)",
+                                        mb: 0.5
                                     }}
                                 >
-                                    คลิกเพื่อดูภาพบัตร
-                                </Button>
-                            </Box>
-                        </CustomTabPanel>
-
-                        {/* แท็บที่ 2: สิทธิประโยชน์ความคุ้มครอง */}
-                        <CustomTabPanel value={activeTab} index={1}>
-                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                                <Box sx={{ bgcolor: "#fff9e6", p: 1.5, borderRadius: 2, border: "1px solid #ffeeba" }}>
-                                    <Typography variant="body2" color="warning.dark" sx={{ fontWeight: "bold", textAlign: "center" }}>
-                                        วงเงินค่ารักษาพยาบาลจากอุบัติเหตุ
-                                    </Typography>
-                                    <Typography variant="h5" color="warning.dark" sx={{ fontWeight: "bold", textAlign: "center", mt: 0.5 }}>
-                                        {foundStudent.coverageLimit} บาท / ครั้ง
-                                    </Typography>
+                                    <DownloadIcon sx={{ color: "#FFFFFF", fontSize: "16px" }} />
                                 </Box>
-
-                                <Typography variant="body2" sx={{ fontWeight: "bold", mt: 1, color: "#07518c" }}>
-                                    สิทธิการชดเชยรายได้และค่ารักษาเพิ่มเติม:
+                                <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "14px", fontWeight: "bold", color: "#000000" }}>
+                                    บันทึกรูปบัตร
                                 </Typography>
-                                <Box sx={{ pl: 1 }}>
-                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        • OPD อนามัย: ชดเชยสูงสุด <strong>{foundStudent.compensationOPDClinic} บาท</strong> / ครั้ง
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        • OPD โรงพยาบาล: ชดเชยสูงสุด <strong>{foundStudent.compensationOPDHospital} บาท</strong> / ครั้ง
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                        • IPD ผู้ป่วยใน: ชดเชยสูงสุด <strong>{foundStudent.compensationIPD} บาท</strong> / วัน
-                                    </Typography>
-                                </Box>
-
-                                <Divider sx={{ my: 1 }} />
-
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">วันที่มีผลบังคับ:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>{foundStudent.effectiveDate}</Typography>
-                                </Box>
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">วันที่สิ้นสุด:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>{foundStudent.expiryDate}</Typography>
-                                </Box>
-                                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                                    <Typography variant="body2" color="text.secondary">ผู้รับประกันภัย:</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: "bold", fontSize: "0.8rem", textAlign: "right" }}>
-                                        {foundStudent.insurer}
-                                    </Typography>
-                                </Box>
                             </Box>
-                        </CustomTabPanel>
-                    </Paper>
-                </Box>
-            )}
+
+                            {/* ปุ่มแชร์ */}
+                            <Box
+                                onClick={handleShareCard}
+                                sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    cursor: "pointer",
+                                    "&:hover opacity": 0.85
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        width: "28px",
+                                        height: "28px",
+                                        background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)",
+                                        borderRadius: "100px",
+                                        display: "flex",
+                                        justifyContent: "center",
+                                        alignItems: "center",
+                                        boxShadow: "0px 2px 4px rgba(0,0,0,0.15)",
+                                        mb: 0.5
+                                    }}
+                                >
+                                    <ShareIcon sx={{ color: "#FFFFFF", fontSize: "16px" }} />
+                                </Box>
+                                <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "14px", fontWeight: "bold", color: "#000000" }}>
+                                    แชร์
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        {/* กล่องแสดงรายละเอียดตาราง ข้อมูลผู้เอาประกัน (Frame 1000008213) */}
+                        <Paper
+                            elevation={2}
+                            sx={{
+                                width: "100%",
+                                p: 2.5,
+                                pt: 2,
+                                pb: 1,
+                                borderRadius: "10px",
+                                bgcolor: "#FFFFFF",
+                                display: "flex",
+                                flexDirection: "column",
+                                boxSizing: "border-box",
+                                boxShadow: "0px 4px 4px rgba(0, 0, 0, 0.25)"
+                            }}
+                        >
+                            {/* หัวข้อส่วน (Frame 1000008326) */}
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                {/* healthicons:insurance-card-outline (ไอคอนรูปบัตรผู้เอาประกัน) */}
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-1c0-2 4-3.1 6-3.1s6 1.1 6 3.1v1z"/>
+                                </svg>
+                                <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "#000000" }}>
+                                    ข้อมูลผู้เอาประกัน
+                                </Typography>
+                            </Box>
+
+                            {/* แถบเส้นสีฟ้า (Frame 1000008218) */}
+                            <Box sx={{ borderTop: "1.5px solid #079AFF", width: "100%", mb: 1 }} />
+
+                            {/* รายละเอียดแต่ละแถว (Frame 1000007971 ถึง 1000007982) */}
+                            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                {getDetailRows(foundStudent).map((row, idx) => (
+                                    <Box
+                                        key={idx}
+                                        sx={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            py: 0.8,
+                                            borderBottom: idx !== 7 ? "1px solid #E0E0E0" : "none"
+                                        }}
+                                    >
+                                        {/* หัวข้อแถว เช่น เลขที่กรมธรรม์ */}
+                                        <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "0.95rem", fontWeight: "bold", color: "#000000" }}>
+                                            {row.label}
+                                        </Typography>
+
+                                        {/* ค่าข้อมูลขวาสุด */}
+                                        <Typography
+                                            sx={{
+                                                fontFamily: "'Prompt', 'Sarabun', sans-serif",
+                                                fontSize: "0.95rem",
+                                                fontWeight: "bold",
+                                                color: row.isBlue ? "#079AFF" : "#707070",
+                                                textAlign: "right"
+                                            }}
+                                        >
+                                            {row.value}
+                                        </Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Paper>
+                    </Box>
+                )}
+            </Box>
 
             {/* Mobile Footer */}
             <MobileFooter />
