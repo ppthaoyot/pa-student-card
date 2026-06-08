@@ -2,9 +2,7 @@ import { useState, useEffect } from "react";
 import {
     Box,
     Paper,
-    Grid,
     Button,
-    TextField,
     MenuItem,
     Select,
     InputLabel,
@@ -20,18 +18,13 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
 import ShareIcon from "@mui/icons-material/Share";
-import SearchIcon from "@mui/icons-material/Search";
-import ClearIcon from "@mui/icons-material/Clear";
 import QrCodeIcon from "@mui/icons-material/QrCode";
 import { PageWrapper } from "../modules/_auth";
 import StandardDataTable from "../modules/_common/components/DataTable/StandardDataTable";
 import Swal from "sweetalert2";
 
 import {
-    searchStudents,
-    getUniqueClassrooms,
-    getUniqueGrades,
-    getUniqueSchools,
+    mockStudents,
     Student
 } from "../modules/_common/mockStudentData";
 
@@ -45,16 +38,11 @@ import {
  */
 const ElectronicCardPage = () => {
     // --- State ของ ฟอร์มค้นหา ---
-    const [selectedSchool, setSelectedSchool] = useState<string>("");
-    const [selectedGrade, setSelectedGrade] = useState<string>("");
-    const [selectedClassroom, setSelectedClassroom] = useState<string>("");
-    const [citizenId, setCitizenId] = useState<string>("");
-    const [studentName, setStudentName] = useState<string>("");
-
-    // --- State ของ รายการคัดกรองใน Dropdown ---
-    const [schools, setSchools] = useState<string[]>([]);
-    const [grades, setGrades] = useState<string[]>([]);
-    const [classrooms, setClassrooms] = useState<string[]>([]);
+    const [selectedProvince, setSelectedProvince] = useState<string>("");
+    const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+    const [selectedSubDistrict, setSelectedSubDistrict] = useState<string>("");
+    const [selectedPlan, setSelectedPlan] = useState<string>("");
+    const [selectedStatus, setSelectedStatus] = useState<string>("");
 
     // --- State ของ ข้อมูลในตารางแสดงผล ---
     const [students, setStudents] = useState<Student[]>([]);
@@ -74,33 +62,48 @@ const ElectronicCardPage = () => {
     });
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 
-    // 1. ดึงรายชื่อโรงเรียนทั้งหมดมาใส่ใน Dropdown เมื่อโหลดหน้าจอครั้งแรก
+    // ดึงข้อมูลเริ่มต้น
     useEffect(() => {
-        setSchools(getUniqueSchools());
-        setStudents(searchStudents({})); // แสดงรายชื่อนักเรียนทั้งหมดเริ่มต้น
+        setStudents(mockStudents);
     }, []);
 
-    // 2. อัปเดตรายชื่อระดับชั้นเรียนเมื่อคุณครูเลือกโรงเรียนใหม่ (Cascading Dropdown)
+    // Cascading dropdowns: reset children when parent changes
     useEffect(() => {
-        setGrades(getUniqueGrades(selectedSchool || undefined));
-        setSelectedGrade("");
-        setSelectedClassroom("");
-    }, [selectedSchool]);
+        setSelectedDistrict("");
+        setSelectedSubDistrict("");
+    }, [selectedProvince]);
 
-    // 3. อัปเดตรายชื่อห้องเรียนเมื่อคุณครูเลือกระดับชั้นเรียนใหม่ (Cascading Dropdown)
     useEffect(() => {
-        setClassrooms(getUniqueClassrooms(selectedSchool || undefined, selectedGrade || undefined));
-        setSelectedClassroom("");
-    }, [selectedGrade, selectedSchool]);
+        setSelectedSubDistrict("");
+    }, [selectedDistrict]);
 
-    // 4. ฟังก์ชันจัดการเมื่อผู้ใช้งานกดปุ่ม "ค้นหา"
+    // Derive dropdown choices dynamically from mockStudents
+    const provinces = Array.from(new Set(mockStudents.map(s => s.province)));
+    
+    const districts = selectedProvince
+        ? Array.from(new Set(mockStudents.filter(s => s.province === selectedProvince).map(s => s.schoolDistrict)))
+        : Array.from(new Set(mockStudents.map(s => s.schoolDistrict)));
+        
+    const subDistricts = (selectedProvince || selectedDistrict)
+        ? Array.from(new Set(mockStudents.filter(s => {
+            if (selectedProvince && s.province !== selectedProvince) return false;
+            if (selectedDistrict && s.schoolDistrict !== selectedDistrict) return false;
+            return true;
+          }).map(s => s.schoolSubDistrict)))
+        : Array.from(new Set(mockStudents.map(s => s.schoolSubDistrict)));
+        
+    const plans = Array.from(new Set(mockStudents.map(s => s.coverageLimit)));
+    const statuses = ["ปกติ", "ค้างชำระ", "ยกเลิก"];
+
+    // ฟังก์ชันจัดการเมื่อผู้ใช้งานกดปุ่ม "ค้นหา"
     const handleSearch = () => {
-        const results = searchStudents({
-            schoolName: selectedSchool || undefined,
-            gradeLevel: selectedGrade || undefined,
-            classroom: selectedClassroom || undefined,
-            citizenId: citizenId || undefined,
-            searchText: studentName || undefined
+        const results = mockStudents.filter(student => {
+            if (selectedProvince && student.province !== selectedProvince) return false;
+            if (selectedDistrict && student.schoolDistrict !== selectedDistrict) return false;
+            if (selectedSubDistrict && student.schoolSubDistrict !== selectedSubDistrict) return false;
+            if (selectedPlan && student.coverageLimit !== selectedPlan) return false;
+            if (selectedStatus && student.paymentStatus !== selectedStatus) return false;
+            return true;
         });
         setStudents(results);
         setPaginated(prev => ({
@@ -110,23 +113,60 @@ const ElectronicCardPage = () => {
         }));
     };
 
-    // 5. ฟังก์ชันล้างเงื่อนไขในฟอร์มค้นหาทั้งหมด
+    // ฟังก์ชันล้างเงื่อนไขในฟอร์มค้นหาทั้งหมด
     const handleClear = () => {
-        setSelectedSchool("");
-        setSelectedGrade("");
-        setSelectedClassroom("");
-        setCitizenId("");
-        setStudentName("");
-        const results = searchStudents({});
-        setStudents(results);
+        setSelectedProvince("");
+        setSelectedDistrict("");
+        setSelectedSubDistrict("");
+        setSelectedPlan("");
+        setSelectedStatus("");
+        setStudents(mockStudents);
         setPaginated(prev => ({
             ...prev,
-            totalAmountRecords: results.length,
+            totalAmountRecords: mockStudents.length,
             currentPage: 1
         }));
     };
 
-    // 6. ฟังก์ชันเมื่อกดปุ่ม "Gen QR Code" เพื่อแสดงป๊อปอัปโปสเตอร์ดาวน์โหลด
+    // ฟังก์ชันส่งออกข้อมูลเป็น CSV (เปิดใน Excel ได้ถูกต้อง)
+    const handleExportExcel = () => {
+        const headers = [
+            "เลขที่ Application",
+            "ชื่อสถานศึกษา",
+            "จังหวัด",
+            "เขต/อำเภอ",
+            "แขวง/ตำบล",
+            "แผนประกัน",
+            "สถานะกรมธรรม์"
+        ];
+        
+        const rows = students.map(s => [
+            s.applicationNo,
+            s.schoolName,
+            s.province,
+            s.schoolDistrict,
+            s.schoolSubDistrict,
+            `แผนความคุ้มครอง (${s.coverageLimit} บาท)`,
+            s.paymentStatus
+        ]);
+        
+        // \ufeff enables UTF-8 BOM so Excel opens Thai characters correctly
+        const csvContent = "\ufeff" + [
+            headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+            ...rows.map(row => row.map(cell => `"${(cell || "").toString().replace(/"/g, '""')}"`).join(","))
+        ].join("\n");
+        
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "รายงานบัตรประกันภัยอิเล็กทรอนิกส์.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // ฟังก์ชันเมื่อกดปุ่ม "Gen QR Code" เพื่อแสดงป๊อปอัปโปสเตอร์ดาวน์โหลด
     const openQrModal = (schoolName: string) => {
         setActiveSchool(schoolName);
         
@@ -147,17 +187,16 @@ const ElectronicCardPage = () => {
         }
 
         // ลิงก์ปลายทางเพื่อให้ผู้ปกครองใช้ค้นหาบัตรผ่านมือถือ
-        const searchUrl = `${window.location.origin}/student/search?school=${encodeURIComponent(schoolName)}`;
+        const searchUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(schoolName)}`;
         
-        // ใช้ QR Server API ในการสร้างรูปภาพ QR Code (สะดวกและไม่มี dependency เพิ่มเติม)
+        // ใช้ QR Server API ในการสร้างรูปภาพ QR Code
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(searchUrl)}`;
         setQrCodeUrl(qrUrl);
         setQrModalOpen(true);
     };
 
-    // 7. ฟังก์ชันวาดภาพโปสเตอร์ QR Code และดาวน์โหลดเป็นรูปภาพ (.png)
+    // ฟังก์ชันวาดภาพโปสเตอร์ QR Code และดาวน์โหลดเป็นรูปภาพ (.png)
     const downloadPoster = () => {
-        // แสดง Spinner หมุนเพื่อบอกให้ผู้ใช้งานรอระหว่างเจนไฟล์ภาพ
         Swal.fire({
             title: 'กำลังสร้างไฟล์รูปภาพ...',
             text: 'กรุณารอซักครู่',
@@ -168,42 +207,36 @@ const ElectronicCardPage = () => {
         });
 
         const img = new Image();
-        img.src = `${import.meta.env.BASE_URL}template-bg-qr-code.png`; // ดึง path ตาม Base URL ของระบบ
+        img.src = `${import.meta.env.BASE_URL}template-bg-qr-code.png`;
         img.onload = () => {
             const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;   // ขนาดจริงของภาพ 1080px
-            canvas.height = img.naturalHeight; // ขนาดจริงของภาพ 1350px
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
             const ctx = canvas.getContext("2d");
             
             if (ctx) {
-                // 7.1 วาดภาพพื้นหลังลงบนผืนผ้าใบ Canvas
                 ctx.drawImage(img, 0, 0);
 
-                // 7.2 เขียนชื่อโรงเรียนลงในแถบแบนเนอร์สีน้ำเงินบนเทมเพลต
                 ctx.font = "bold 42px 'Sarabun', sans-serif";
                 ctx.fillStyle = "#ffffff";
                 ctx.textAlign = "center";
-                // The blue banner is roughly centered horizontally, and its vertical center is at y = 322
                 ctx.fillText(activeSchool, canvas.width / 2, 322);
 
-                // 7.3 โหลดภาพ QR Code เพื่อนำมาวาดรวมกัน
                 const qrImg = new Image();
                 qrImg.crossOrigin = "anonymous";
                 qrImg.src = qrCodeUrl;
                 qrImg.onload = () => {
-                    // วาดรหัส QR Code ลงในกล่องสีขาวตรงกลางโปสเตอร์
                     const qrSize = 420;
                     const qrX = (canvas.width - qrSize) / 2;
                     const qrY = 480;
                     ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-                    // 7.4 แปลงผลลัพธ์บน Canvas เป็น Data URL และสั่งดาวน์โหลดอัตโนมัติ
                     const dataUrl = canvas.toDataURL("image/png");
                     const link = document.createElement("a");
                     link.download = `QR_${activeSchool}.png`;
                     link.href = dataUrl;
                     link.click();
-                    Swal.close(); // ปิดแจ้งเตือนโหลดสำเร็จ
+                    Swal.close();
                 };
                 qrImg.onerror = () => {
                     Swal.fire({
@@ -223,9 +256,9 @@ const ElectronicCardPage = () => {
         };
     };
 
-    // 8. ฟังก์ชันก๊อปปี้ลิงก์เพื่อแชร์ให้คนอื่นเปิดได้โดยตรง
+    // ฟังก์ชันก๊อปปี้ลิงก์เพื่อแชร์ให้คนอื่นเปิดได้โดยตรง
     const handleShare = () => {
-        const searchUrl = `${window.location.origin}/student/search?school=${encodeURIComponent(activeSchool)}`;
+        const searchUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(activeSchool)}`;
         navigator.clipboard.writeText(searchUrl);
         Swal.fire({
             icon: "success",
@@ -244,14 +277,14 @@ const ElectronicCardPage = () => {
             options: {
                 customBodyRender: (value: string, tableMeta: any) => {
                     const student = students[tableMeta.rowIndex];
+                    if (!student) return value;
                     return (
                         <Typography
                             variant="body2"
                             color="primary"
                             sx={{ fontWeight: "bold", textDecoration: "underline", cursor: "pointer" }}
                             onClick={() => {
-                                // เปิดแท็บใหม่เพื่อแสดงหน้าบัตรของนักเรียนแต่ละคน (เลียนแบบการทำงานจากฝั่งผู้ประสานงาน)
-                                window.open(`/student/card/${student.citizenId}`, "_blank");
+                                window.open(`${import.meta.env.BASE_URL}student/card/${student.citizenId}`, "_blank");
                             }}
                         >
                             {value}
@@ -269,26 +302,25 @@ const ElectronicCardPage = () => {
             label: "จังหวัด",
         },
         {
-            name: "gradeLevel",
-            label: "ระดับชั้น",
+            name: "schoolDistrict",
+            label: "เขต/อำเภอ",
+        },
+        {
+            name: "schoolSubDistrict",
+            label: "แขวง/ตำบล",
+        },
+        {
+            name: "coverageLimit",
+            label: "แผนประกัน",
             options: {
-                customBodyRender: (value: string, tableMeta: any) => {
-                    const student = students[tableMeta.rowIndex];
-                    return `${value}/${student.classroom}`;
+                customBodyRender: (value: string) => {
+                    return `แผนความคุ้มครอง (${value} บาท)`;
                 }
             }
         },
         {
-            name: "refNo",
-            label: "เลขอ้างอิง",
-        },
-        {
-            name: "policyNo",
-            label: "เลขกรมธรรม์",
-        },
-        {
             name: "paymentStatus",
-            label: "สถานะการชำระเงิน",
+            label: "สถานะกรมธรรม์",
             options: {
                 customBodyRender: (value: string) => {
                     const isPaid = value === "ปกติ";
@@ -306,7 +338,7 @@ const ElectronicCardPage = () => {
         },
         {
             name: "schoolName",
-            label: "การจัดการ",
+            label: "ดูรายละเอียด",
             options: {
                 filter: false,
                 sort: false,
@@ -335,115 +367,233 @@ const ElectronicCardPage = () => {
 
     return (
         <PageWrapper title="บัตรประกันภัยอิเล็กทรอนิกส์">
-            <Box sx={{ p: 2 }}>
-                {/* แผงฟอร์มค้นหาข้อมูล */}
-                <Paper elevation={3} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-                    <Typography variant="h6" sx={{ mb: 3, fontWeight: "bold", color: "#07518c" }}>
-                        เงื่อนไขการค้นหา
-                    </Typography>
-
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} md={4}>
-                            <FormControl fullWidth size="small">
-                                <InputLabel>สถานศึกษา</InputLabel>
-                                <Select
-                                    label="สถานศึกษา"
-                                    value={selectedSchool}
-                                    onChange={(e) => setSelectedSchool(e.target.value)}
-                                >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {schools.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={4}>
-                            <FormControl fullWidth size="small" disabled={!selectedSchool}>
-                                <InputLabel>ระดับชั้น</InputLabel>
-                                <Select
-                                    label="ระดับชั้น"
-                                    value={selectedGrade}
-                                    onChange={(e) => setSelectedGrade(e.target.value)}
-                                >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {grades.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={4}>
-                            <FormControl fullWidth size="small" disabled={!selectedGrade}>
-                                <InputLabel>ห้องเรียน</InputLabel>
-                                <Select
-                                    label="ห้องเรียน"
-                                    value={selectedClassroom}
-                                    onChange={(e) => setSelectedClassroom(e.target.value)}
-                                >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {classrooms.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="เลขบัตรประจำตัวประชาชน / Passport นักเรียน"
-                                value={citizenId}
-                                onChange={(e) => setCitizenId(e.target.value)}
-                            />
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="ชื่อหรือนามสกุลนักเรียน"
-                                value={studentName}
-                                onChange={(e) => setStudentName(e.target.value)}
-                            />
-                        </Grid>
-                    </Grid>
-
-                    <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end", gap: 2 }}>
-                        <Button
-                            variant="outlined"
-                            color="secondary"
-                            startIcon={<ClearIcon />}
-                            onClick={handleClear}
-                            sx={{ borderRadius: 2, px: 3 }}
-                        >
-                            ล้างเงื่อนไข
-                        </Button>
+            <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "#F5F5F7", minHeight: "100vh" }}>
+                <Paper
+                    elevation={0}
+                    sx={{
+                        p: "32px 16px 48px",
+                        bgcolor: "#FFFFFF",
+                        borderRadius: "10px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "32px",
+                        boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.05)"
+                    }}
+                >
+                    {/* Excel Row */}
+                    <Box sx={{ display: "flex", justifyContent: "flex-start", width: "100%" }}>
                         <Button
                             variant="contained"
-                            color="primary"
-                            startIcon={<SearchIcon />}
-                            onClick={handleSearch}
-                            sx={{ borderRadius: 2, px: 3 }}
+                            onClick={handleExportExcel}
+                            sx={{
+                                width: "200px",
+                                height: "45px",
+                                backgroundColor: "#388E3C",
+                                "&:hover": {
+                                    backgroundColor: "#2E7D32"
+                                },
+                                fontFamily: "TH Sarabun New",
+                                fontSize: "24px",
+                                fontWeight: "bold",
+                                borderRadius: "4px",
+                                textTransform: "none"
+                            }}
                         >
-                            ค้นหา
+                            Excel
                         </Button>
                     </Box>
-                </Paper>
 
-                {/* ตารางแสดงผลลัพธ์นักเรียน */}
-                <Paper elevation={3} sx={{ borderRadius: 2, overflow: "hidden" }}>
-                    <StandardDataTable
-                        name="students"
-                        title={`ผลลัพธ์การค้นหา (${students.length} รายการ)`}
-                        columns={columns}
-                        data={students}
-                        color="primary"
-                        options={{
-                            serverSide: false, // ใช้การค้นหาตัวกรองฝั่ง Client (Mock)
-                            rowsPerPage: 10,
-                            selectableRows: "none",
-                            download: true,
-                            print: true
-                        }}
-                    />
+                    {/* Filter Panel */}
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                        {/* Row 1 */}
+                        <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: "32px", width: "100%" }}>
+                            {/* จังหวัด */}
+                            <FormControl sx={{ width: { xs: "100%", lg: 365 }, height: 48 }}>
+                                <InputLabel sx={{ fontFamily: "TH Sarabun New", fontSize: "20px", fontWeight: "bold", color: "#A6A6A6" }}>จังหวัด</InputLabel>
+                                <Select
+                                    label="จังหวัด"
+                                    value={selectedProvince}
+                                    onChange={(e) => setSelectedProvince(e.target.value)}
+                                    sx={{
+                                        height: 48,
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        color: "#212121",
+                                        "& .MuiOutlinedInput-notchedOutline": {
+                                            borderColor: "#A6A6A6"
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="" sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}><em>ทั้งหมด</em></MenuItem>
+                                    {provinces.map(p => (
+                                        <MenuItem key={p} value={p} sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}>{p}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            {/* เขต/อำเภอ */}
+                            <FormControl sx={{ width: { xs: "100%", lg: 365 }, height: 48 }}>
+                                <InputLabel sx={{ fontFamily: "TH Sarabun New", fontSize: "20px", fontWeight: "bold", color: "#A6A6A6" }}>เขต/อำเภอ</InputLabel>
+                                <Select
+                                    label="เขต/อำเภอ"
+                                    value={selectedDistrict}
+                                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                                    sx={{
+                                        height: 48,
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        color: "#212121",
+                                        "& .MuiOutlinedInput-notchedOutline": {
+                                            borderColor: "#A6A6A6"
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="" sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}><em>ทั้งหมด</em></MenuItem>
+                                    {districts.map(d => (
+                                        <MenuItem key={d} value={d} sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}>{d}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            {/* แขวง/ตำบล */}
+                            <FormControl sx={{ width: { xs: "100%", lg: 365 }, height: 48 }}>
+                                <InputLabel sx={{ fontFamily: "TH Sarabun New", fontSize: "20px", fontWeight: "bold", color: "#A6A6A6" }}>แขวง/ตำบล</InputLabel>
+                                <Select
+                                    label="แขวง/ตำบล"
+                                    value={selectedSubDistrict}
+                                    onChange={(e) => setSelectedSubDistrict(e.target.value)}
+                                    sx={{
+                                        height: 48,
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        color: "#212121",
+                                        "& .MuiOutlinedInput-notchedOutline": {
+                                            borderColor: "#A6A6A6"
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="" sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}><em>ทั้งหมด</em></MenuItem>
+                                    {subDistricts.map(sd => (
+                                        <MenuItem key={sd} value={sd} sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}>{sd}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            {/* แผนประกัน */}
+                            <FormControl sx={{ width: { xs: "100%", lg: 365 }, height: 48 }}>
+                                <InputLabel sx={{ fontFamily: "TH Sarabun New", fontSize: "20px", fontWeight: "bold", color: "#A6A6A6" }}>แผนประกัน</InputLabel>
+                                <Select
+                                    label="แผนประกัน"
+                                    value={selectedPlan}
+                                    onChange={(e) => setSelectedPlan(e.target.value)}
+                                    sx={{
+                                        height: 48,
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        color: "#212121",
+                                        "& .MuiOutlinedInput-notchedOutline": {
+                                            borderColor: "#A6A6A6"
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="" sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}><em>ทั้งหมด</em></MenuItem>
+                                    {plans.map(p => (
+                                        <MenuItem key={p} value={p} sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}>
+                                            {`แผนความคุ้มครอง (${p} บาท)`}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
+
+                        {/* Row 2 */}
+                        <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: "32px", width: "100%", alignItems: "center" }}>
+                            {/* สถานะกรมธรรม์ */}
+                            <FormControl sx={{ width: { xs: "100%", lg: 365 }, height: 48 }}>
+                                <InputLabel sx={{ fontFamily: "TH Sarabun New", fontSize: "20px", fontWeight: "bold", color: "#A6A6A6" }}>สถานะกรมธรรม์</InputLabel>
+                                <Select
+                                    label="สถานะกรมธรรม์"
+                                    value={selectedStatus}
+                                    onChange={(e) => setSelectedStatus(e.target.value)}
+                                    sx={{
+                                        height: 48,
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        color: "#212121",
+                                        "& .MuiOutlinedInput-notchedOutline": {
+                                            borderColor: "#A6A6A6"
+                                        }
+                                    }}
+                                >
+                                    <MenuItem value="" sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}><em>ทั้งหมด</em></MenuItem>
+                                    {statuses.map(s => (
+                                        <MenuItem key={s} value={s} sx={{ fontFamily: "TH Sarabun New", fontSize: "22px" }}>{s}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            {/* Buttons */}
+                            <Box sx={{ display: "flex", gap: "23px", width: { xs: "100%", lg: 365 }, justifyContent: "flex-start", height: 45 }}>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleSearch}
+                                    sx={{
+                                        width: "100px",
+                                        height: "45px",
+                                        backgroundColor: "#007AC1",
+                                        "&:hover": {
+                                            backgroundColor: "#005b90"
+                                        },
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "25px",
+                                        fontWeight: "bold",
+                                        color: "#FFFFFF",
+                                        borderRadius: "4px",
+                                        boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.12), 0px 2px 2px rgba(0, 0, 0, 0.14), 0px 3px 1px -2px rgba(0, 0, 0, 0.2)"
+                                    }}
+                                >
+                                    ค้นหา
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={handleClear}
+                                    sx={{
+                                        height: "45px",
+                                        fontFamily: "TH Sarabun New",
+                                        fontSize: "24px",
+                                        fontWeight: "bold",
+                                        borderRadius: "4px"
+                                    }}
+                                >
+                                    ล้างเงื่อนไข
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+
+                    {/* Table */}
+                    <Box sx={{ width: "100%", mt: 1 }}>
+                        <StandardDataTable
+                            name="students"
+                            title={`ผลลัพธ์การค้นหา (${students.length} รายการ)`}
+                            columns={columns}
+                            data={students}
+                            color="primary"
+                            options={{
+                                serverSide: false,
+                                rowsPerPage: 10,
+                                selectableRows: "none",
+                                download: true,
+                                print: true
+                            }}
+                        />
+                    </Box>
                 </Paper>
             </Box>
 
