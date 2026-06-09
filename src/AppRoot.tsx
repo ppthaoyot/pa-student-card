@@ -17,6 +17,9 @@ import { fas } from "@fortawesome/free-solid-svg-icons";
 import { UserManager, WebStorageStateStore } from "oidc-client-ts";
 import { AuthProvider } from "./app/modules/_auth";
 
+import { ThemeProvider } from "@mui/material";
+import { defaultTheme } from "./app/layout/theme";
+
 dayjs.locale(th);
 dayjs.extend(buddhistEra);
 dayjs.extend(timezone);
@@ -54,12 +57,16 @@ const AppRoot = () => {
         monitorSession: true,
     });
 
+    const showReactQueryDevtools = window.location.search.includes("debugDevtools=true");
+
     return (
         <AuthProvider oidcUserManager={oidcUserManager}>
             <ReduxProvider>
                 <QueryClientProvider client={queryClient}>
-                    <App />
-                    {showReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
+                    <ThemeProvider theme={defaultTheme}>
+                        <App />
+                        {showReactQueryDevtools && <ReactQueryDevtools initialIsOpen={false} />}
+                    </ThemeProvider>
                 </QueryClientProvider>
             </ReduxProvider>
         </AuthProvider>
@@ -67,4 +74,3 @@ const AppRoot = () => {
 };
 
 export default AppRoot;
-    const showReactQueryDevtools = window.location.search.includes("debugDevtools=true");

@@ -20,17 +20,16 @@ export const MobileFooter = () => {
                 bottom: 0,
                 left: "50%",
                 transform: "translateX(-50%)",
-                zIndex: 1000
+                zIndex: 1000,
             }}
         >
             <Typography
                 sx={{
-                    fontFamily: "'Prompt', 'Sarabun', sans-serif",
                     fontWeight: 400,
                     fontSize: "13px",
                     lineHeight: "20px",
                     color: "#FFFFFF",
-                    whiteSpace: "nowrap"
+                    whiteSpace: "nowrap",
                 }}
             >
                 Call Center โทร 1434 (บริการ 24 ชั่วโมง)
@@ -51,7 +50,7 @@ export const MobileFooter = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#079AFF"
+                        color: "#079AFF",
                     }}
                 >
                     <LanguageIcon sx={{ fontSize: 18 }} />
@@ -70,7 +69,7 @@ export const MobileFooter = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#06C755"
+                        color: "#06C755",
                     }}
                 >
                     <ChatBubbleOutlineIcon sx={{ fontSize: 17 }} />

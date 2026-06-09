@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-    Box,
-    Button,
-} from "@mui/material";
+import { Box, Button } from "@mui/material";
 import DownloadIcon from "@mui/icons-material/Download";
 import Swal from "sweetalert2";
 
@@ -35,7 +32,7 @@ const StudentCard = () => {
                     icon: "error",
                     title: "ไม่พบข้อมูลบัตร",
                     text: "ไม่พบข้อมูลสิทธิ์ประกันภัยนี้ในระบบ",
-                    confirmButtonColor: "#07518c"
+                    confirmButtonColor: "#07518c",
                 }).then(() => {
                     navigate("/student/search");
                 });
@@ -64,7 +61,11 @@ const StudentCard = () => {
         ctx.fillText(`ระดับการศึกษา : ${targetStudent.gradeLevel}`, xLeft, 234);
 
         setFont(15, true);
-        ctx.fillText(`ชื่อผู้เอาประกัน : ${targetStudent.title}${targetStudent.firstName} ${targetStudent.lastName}`, xLeft, 276);
+        ctx.fillText(
+            `ชื่อผู้เอาประกัน : ${targetStudent.title}${targetStudent.firstName} ${targetStudent.lastName}`,
+            xLeft,
+            276
+        );
 
         setFont(15, true);
         ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 318);
@@ -121,7 +122,7 @@ const StudentCard = () => {
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
-            }
+            },
         });
 
         const img = new Image();
@@ -147,7 +148,7 @@ const StudentCard = () => {
             Swal.fire({
                 icon: "error",
                 title: "ดาวน์โหลดล้มเหลว",
-                text: "ไม่สามารถโหลดรูปภาพพื้นหลังบัตรได้"
+                text: "ไม่สามารถโหลดรูปภาพพื้นหลังบัตรได้",
             });
         };
     };
@@ -164,7 +165,7 @@ const StudentCard = () => {
                 flexDirection: "column",
                 alignItems: "center",
                 fontFamily: "Sarabun",
-                pb: "78px"
+                pb: "78px",
             }}
         >
             {/* แทบเมนูด้านบนของหน้าจอบนมือถือ */}
@@ -172,23 +173,22 @@ const StudentCard = () => {
             <Box
                 sx={{
                     width: "100%",
-                    maxWidth: "432px",
+                    maxWidth: "480px",
                     px: 2,
                     pt: 6,
                     boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
-                    gap: 3
+                    gap: 3,
                 }}
             >
                 <Box
                     sx={{
                         width: "100%",
-                        maxWidth: 400,
+                        maxWidth: 440,
                         borderRadius: "8px",
                         overflow: "hidden",
-                        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)"
                     }}
                 >
                     <canvas
@@ -198,7 +198,7 @@ const StudentCard = () => {
                         style={{
                             width: "100%",
                             height: "auto",
-                            display: "block"
+                            display: "block",
                         }}
                     />
                 </Box>
@@ -216,7 +216,7 @@ const StudentCard = () => {
                         py: 1.5,
                         borderRadius: 3,
                         fontWeight: "bold",
-                        "&:hover": { bgcolor: "#053e6d" }
+                        "&:hover": { bgcolor: "#053e6d" },
                     }}
                 >
                     ดาวน์โหลดภาพบัตรประกันภัย
@@ -224,7 +224,13 @@ const StudentCard = () => {
                 <Button
                     fullWidth
                     variant="text"
-                    onClick={() => navigate(`/student/search?school=${encodeURIComponent(student.schoolName)}&citizenId=${student.citizenId}`)}
+                    onClick={() =>
+                        navigate(
+                            `/student/search?school=${encodeURIComponent(student.schoolName)}&citizenId=${
+                                student.citizenId
+                            }`
+                        )
+                    }
                     sx={{ color: "#07518c", fontWeight: 700 }}
                 >
                     กลับไปหน้าค้นหา

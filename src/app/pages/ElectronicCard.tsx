@@ -22,10 +22,7 @@ import { PageWrapper } from "../modules/_auth";
 import StandardDataTable from "../modules/_common/components/DataTable/StandardDataTable";
 import Swal from "sweetalert2";
 
-import {
-    mockStudents,
-    Student
-} from "../modules/_common/mockStudentData";
+import { mockStudents, Student } from "../modules/_common/mockStudentData";
 
 /**
  * หน้าจอระบบจัดการบัตรประกันภัยอิเล็กทรอนิกส์สำหรับครูผู้ประสานงาน (Desktop View)
@@ -57,7 +54,7 @@ const ElectronicCardPage = () => {
     const [schoolDetails, setSchoolDetails] = useState({
         subDistrict: "",
         district: "",
-        province: ""
+        province: "",
     });
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
 
@@ -77,48 +74,53 @@ const ElectronicCardPage = () => {
     }, [selectedDistrict]);
 
     // Derive dropdown choices dynamically from mockStudents
-    const provinces = Array.from(new Set(mockStudents.map(s => s.province)));
-    
+    const provinces = Array.from(new Set(mockStudents.map((s) => s.province)));
+
     const districts = selectedProvince
-        ? Array.from(new Set(mockStudents.filter(s => s.province === selectedProvince).map(s => s.schoolDistrict)))
-        : Array.from(new Set(mockStudents.map(s => s.schoolDistrict)));
-        
-    const subDistricts = (selectedProvince || selectedDistrict)
-        ? Array.from(new Set(mockStudents.filter(s => {
-            if (selectedProvince && s.province !== selectedProvince) return false;
-            if (selectedDistrict && s.schoolDistrict !== selectedDistrict) return false;
-            return true;
-          }).map(s => s.schoolSubDistrict)))
-        : Array.from(new Set(mockStudents.map(s => s.schoolSubDistrict)));
-        
-    const schools = Array.from(new Set(mockStudents.map(s => s.schoolName)));
+        ? Array.from(new Set(mockStudents.filter((s) => s.province === selectedProvince).map((s) => s.schoolDistrict)))
+        : Array.from(new Set(mockStudents.map((s) => s.schoolDistrict)));
+
+    const subDistricts =
+        selectedProvince || selectedDistrict
+            ? Array.from(
+                  new Set(
+                      mockStudents
+                          .filter((s) => {
+                              if (selectedProvince && s.province !== selectedProvince) return false;
+                              if (selectedDistrict && s.schoolDistrict !== selectedDistrict) return false;
+                              return true;
+                          })
+                          .map((s) => s.schoolSubDistrict)
+                  )
+              )
+            : Array.from(new Set(mockStudents.map((s) => s.schoolSubDistrict)));
+
+    const schools = Array.from(new Set(mockStudents.map((s) => s.schoolName)));
     const statuses = ["ปกติ", "ค้างชำระ", "ยกเลิก"];
 
     const fieldSx = {
         width: { xs: "100%", lg: 365 },
         height: 48,
         "& .MuiInputLabel-root": {
-            fontFamily: "'Prompt', 'Sarabun', sans-serif",
             fontSize: "14px",
             color: "#9E9E9E",
             bgcolor: "#FFFFFF",
-            px: 0.5
+            px: 0.5,
         },
         "& .MuiSelect-select": {
-            fontFamily: "'Prompt', 'Sarabun', sans-serif",
             fontSize: "18px",
             fontWeight: 400,
             color: "#212121",
-            py: "11px"
+            py: "11px",
         },
         "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#BDBDBD"
-        }
+            borderColor: "#BDBDBD",
+        },
     };
 
     // ฟังก์ชันจัดการเมื่อผู้ใช้งานกดปุ่ม "ค้นหา"
     const handleSearch = () => {
-        const results = mockStudents.filter(student => {
+        const results = mockStudents.filter((student) => {
             if (selectedProvince && student.province !== selectedProvince) return false;
             if (selectedDistrict && student.schoolDistrict !== selectedDistrict) return false;
             if (selectedSubDistrict && student.schoolSubDistrict !== selectedSubDistrict) return false;
@@ -127,36 +129,38 @@ const ElectronicCardPage = () => {
             return true;
         });
         setStudents(results);
-        setPaginated(prev => ({
+        setPaginated((prev) => ({
             ...prev,
             totalAmountRecords: results.length,
-            currentPage: 1
+            currentPage: 1,
         }));
     };
 
     // ฟังก์ชันเมื่อกดปุ่ม "Gen QR Code" เพื่อแสดงป๊อปอัปโปสเตอร์ดาวน์โหลด
     const openQrModal = (schoolName: string) => {
         setActiveSchool(schoolName);
-        
+
         // ค้นหาข้อมูลที่อยู่ของโรงเรียนจากข้อมูลนักเรียนใน mock
-        const studentInSchool = students.find(s => s.schoolName === schoolName);
+        const studentInSchool = students.find((s) => s.schoolName === schoolName);
         if (studentInSchool) {
             setSchoolDetails({
                 subDistrict: studentInSchool.schoolSubDistrict,
                 district: studentInSchool.schoolDistrict,
-                province: studentInSchool.province
+                province: studentInSchool.province,
             });
         } else {
             setSchoolDetails({
                 subDistrict: "ก้อนแก้ว",
                 district: "คลองเขื่อน",
-                province: "ฉะเชิงเทรา"
+                province: "ฉะเชิงเทรา",
             });
         }
 
         // ลิงก์ปลายทางเพื่อให้ผู้ปกครองใช้ค้นหาบัตรผ่านมือถือ
-        const searchUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(schoolName)}`;
-        
+        const searchUrl = `${window.location.origin}${
+            import.meta.env.BASE_URL
+        }student/search?school=${encodeURIComponent(schoolName)}`;
+
         // ใช้ QR Server API ในการสร้างรูปภาพ QR Code
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(searchUrl)}`;
         setQrCodeUrl(qrUrl);
@@ -166,12 +170,12 @@ const ElectronicCardPage = () => {
     // ฟังก์ชันวาดภาพโปสเตอร์ QR Code และดาวน์โหลดเป็นรูปภาพ (.png)
     const downloadPoster = () => {
         Swal.fire({
-            title: 'กำลังสร้างไฟล์รูปภาพ...',
-            text: 'กรุณารอซักครู่',
+            title: "กำลังสร้างไฟล์รูปภาพ...",
+            text: "กรุณารอซักครู่",
             allowOutsideClick: false,
             didOpen: () => {
                 Swal.showLoading();
-            }
+            },
         });
 
         const img = new Image();
@@ -181,7 +185,7 @@ const ElectronicCardPage = () => {
             canvas.width = img.naturalWidth;
             canvas.height = img.naturalHeight;
             const ctx = canvas.getContext("2d");
-            
+
             if (ctx) {
                 ctx.drawImage(img, 0, 0);
 
@@ -208,32 +212,34 @@ const ElectronicCardPage = () => {
                 };
                 qrImg.onerror = () => {
                     Swal.fire({
-                        icon: 'error',
-                        title: 'เกิดข้อผิดพลาด',
-                        text: 'ไม่สามารถดาวน์โหลดภาพ QR Code ได้เนื่องจากปัญหาเครือข่าย'
+                        icon: "error",
+                        title: "เกิดข้อผิดพลาด",
+                        text: "ไม่สามารถดาวน์โหลดภาพ QR Code ได้เนื่องจากปัญหาเครือข่าย",
                     });
                 };
             }
         };
         img.onerror = () => {
             Swal.fire({
-                icon: 'error',
-                title: 'เกิดข้อผิดพลาด',
-                text: 'ไม่สามารถดึงรูปภาพพื้นหลังโปสเตอร์มาประมวลผลได้'
+                icon: "error",
+                title: "เกิดข้อผิดพลาด",
+                text: "ไม่สามารถดึงรูปภาพพื้นหลังโปสเตอร์มาประมวลผลได้",
             });
         };
     };
 
     // ฟังก์ชันก๊อปปี้ลิงก์เพื่อแชร์ให้คนอื่นเปิดได้โดยตรง
     const handleShare = () => {
-        const searchUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(activeSchool)}`;
+        const searchUrl = `${window.location.origin}${
+            import.meta.env.BASE_URL
+        }student/search?school=${encodeURIComponent(activeSchool)}`;
         navigator.clipboard.writeText(searchUrl);
         Swal.fire({
             icon: "success",
             title: "คัดลอกลิงก์เรียบร้อยแล้ว!",
             text: "คุณสามารถส่งลิงก์นี้ต่อให้กับผู้ปกครองหรือนักเรียนเพื่อใช้ค้นหาบัตรได้ทันที",
             timer: 2000,
-            showConfirmButton: false
+            showConfirmButton: false,
         });
     };
 
@@ -258,8 +264,8 @@ const ElectronicCardPage = () => {
                             {value}
                         </Typography>
                     );
-                }
-            }
+                },
+            },
         },
         {
             name: "schoolName",
@@ -299,16 +305,15 @@ const ElectronicCardPage = () => {
                                 display: "inline-flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                 fontSize: "16px",
-                                fontWeight: 600
+                                fontWeight: 600,
                             }}
                         >
                             {value}
                         </Box>
                     );
-                }
-            }
+                },
+            },
         },
         {
             name: "schoolName",
@@ -331,18 +336,17 @@ const ElectronicCardPage = () => {
                                 minWidth: 160,
                                 height: 45,
                                 fontSize: "17px",
-                                fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                 fontWeight: 500,
                                 boxShadow: "0px 2px 4px rgba(0,0,0,0.2)",
-                                "&:hover": { bgcolor: "#0C95D1" }
+                                "&:hover": { bgcolor: "#0C95D1" },
                             }}
                         >
                             Gen QR Code
                         </Button>
                     );
-                }
-            }
-        }
+                },
+            },
+        },
     ];
 
     return (
@@ -357,13 +361,20 @@ const ElectronicCardPage = () => {
                         display: "flex",
                         flexDirection: "column",
                         gap: "32px",
-                        boxShadow: "none"
+                        boxShadow: "none",
                     }}
                 >
                     {/* Filter Panel */}
                     <Box sx={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
                         {/* Row 1 */}
-                        <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: "32px", width: "100%" }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: { xs: "column", lg: "row" },
+                                gap: "32px",
+                                width: "100%",
+                            }}
+                        >
                             {/* จังหวัด */}
                             <FormControl sx={fieldSx}>
                                 <InputLabel>จังหวัด</InputLabel>
@@ -373,9 +384,13 @@ const ElectronicCardPage = () => {
                                     onChange={(e) => setSelectedProvince(e.target.value)}
                                     sx={{ height: 48 }}
                                 >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {provinces.map(p => (
-                                        <MenuItem key={p} value={p}>{p}</MenuItem>
+                                    <MenuItem value="">
+                                        <em>ทั้งหมด</em>
+                                    </MenuItem>
+                                    {provinces.map((p) => (
+                                        <MenuItem key={p} value={p}>
+                                            {p}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -389,9 +404,13 @@ const ElectronicCardPage = () => {
                                     onChange={(e) => setSelectedDistrict(e.target.value)}
                                     sx={{ height: 48 }}
                                 >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {districts.map(d => (
-                                        <MenuItem key={d} value={d}>{d}</MenuItem>
+                                    <MenuItem value="">
+                                        <em>ทั้งหมด</em>
+                                    </MenuItem>
+                                    {districts.map((d) => (
+                                        <MenuItem key={d} value={d}>
+                                            {d}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -405,9 +424,13 @@ const ElectronicCardPage = () => {
                                     onChange={(e) => setSelectedSubDistrict(e.target.value)}
                                     sx={{ height: 48 }}
                                 >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {subDistricts.map(sd => (
-                                        <MenuItem key={sd} value={sd}>{sd}</MenuItem>
+                                    <MenuItem value="">
+                                        <em>ทั้งหมด</em>
+                                    </MenuItem>
+                                    {subDistricts.map((sd) => (
+                                        <MenuItem key={sd} value={sd}>
+                                            {sd}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -421,16 +444,28 @@ const ElectronicCardPage = () => {
                                     onChange={(e) => setSelectedPlan(e.target.value)}
                                     sx={{ height: 48 }}
                                 >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {schools.map(p => (
-                                        <MenuItem key={p} value={p}>{p}</MenuItem>
+                                    <MenuItem value="">
+                                        <em>ทั้งหมด</em>
+                                    </MenuItem>
+                                    {schools.map((p) => (
+                                        <MenuItem key={p} value={p}>
+                                            {p}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
                         </Box>
 
                         {/* Row 2 */}
-                        <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: "32px", width: "100%", alignItems: "center" }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: { xs: "column", lg: "row" },
+                                gap: "32px",
+                                width: "100%",
+                                alignItems: "center",
+                            }}
+                        >
                             {/* สถานะกรมธรรม์ */}
                             <FormControl sx={fieldSx}>
                                 <InputLabel>สถานะกรมธรรม์</InputLabel>
@@ -440,15 +475,26 @@ const ElectronicCardPage = () => {
                                     onChange={(e) => setSelectedStatus(e.target.value)}
                                     sx={{ height: 48 }}
                                 >
-                                    <MenuItem value=""><em>ทั้งหมด</em></MenuItem>
-                                    {statuses.map(s => (
-                                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                                    <MenuItem value="">
+                                        <em>ทั้งหมด</em>
+                                    </MenuItem>
+                                    {statuses.map((s) => (
+                                        <MenuItem key={s} value={s}>
+                                            {s}
+                                        </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
                             {/* Buttons */}
-                            <Box sx={{ display: "flex", width: { xs: "100%", lg: 365 }, justifyContent: "flex-start", height: 45 }}>
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    width: { xs: "100%", lg: 365 },
+                                    justifyContent: "flex-start",
+                                    height: 45,
+                                }}
+                            >
                                 <Button
                                     variant="contained"
                                     onClick={handleSearch}
@@ -457,14 +503,14 @@ const ElectronicCardPage = () => {
                                         height: "45px",
                                         backgroundColor: "#007AC1",
                                         "&:hover": {
-                                            backgroundColor: "#005b90"
+                                            backgroundColor: "#005b90",
                                         },
-                                        fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                         fontSize: "18px",
                                         fontWeight: 700,
                                         color: "#FFFFFF",
                                         borderRadius: "4px",
-                                        boxShadow: "0px 1px 5px rgba(0, 0, 0, 0.12), 0px 2px 2px rgba(0, 0, 0, 0.14), 0px 3px 1px -2px rgba(0, 0, 0, 0.2)"
+                                        boxShadow:
+                                            "0px 1px 5px rgba(0, 0, 0, 0.12), 0px 2px 2px rgba(0, 0, 0, 0.14), 0px 3px 1px -2px rgba(0, 0, 0, 0.2)",
                                     }}
                                 >
                                     ค้นหา
@@ -496,35 +542,33 @@ const ElectronicCardPage = () => {
                                         noMatch: "ไม่พบข้อมูล",
                                         toolTip: "Sort",
                                         columnHeaderTooltip: (column) => `จัดเรียงจาก ${column.label}`,
-                                    }
-                                }
+                                    },
+                                },
                             }}
                             sx={{
                                 "& .MuiPaper-root": {
-                                    boxShadow: "none"
+                                    boxShadow: "none",
                                 },
                                 "& .MuiTableCell-head": {
                                     height: "43px",
-                                    fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                     fontSize: "16px",
                                     fontWeight: 700,
                                     bgcolor: "#007AC1 !important",
                                     color: "#FFFFFF !important",
-                                    borderRight: "1px solid rgba(255,255,255,0.12)"
+                                    borderRight: "1px solid rgba(255,255,255,0.12)",
                                 },
                                 "& .MuiTableCell-body": {
                                     height: "94px",
-                                    fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                     fontSize: "16px",
                                     color: "#111111",
-                                    borderBottom: "1px solid #D6D6D6"
+                                    borderBottom: "1px solid #D6D6D6",
                                 },
                                 "& .MuiTableRow-root": {
-                                    bgcolor: "#FFFFFF"
+                                    bgcolor: "#FFFFFF",
                                 },
                                 "& .MuiTableFooter-root": {
-                                    display: "none"
-                                }
+                                    display: "none",
+                                },
                             }}
                         />
                     </Box>
@@ -538,7 +582,7 @@ const ElectronicCardPage = () => {
                 maxWidth="sm"
                 fullWidth
                 PaperProps={{
-                    sx: { borderRadius: "8px", overflow: "hidden" }
+                    sx: { borderRadius: "8px", overflow: "hidden" },
                 }}
             >
                 <DialogTitle
@@ -549,12 +593,10 @@ const ElectronicCardPage = () => {
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
-                        borderBottom: "1px solid #E0E0E0"
+                        borderBottom: "1px solid #E0E0E0",
                     }}
                 >
-                    <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "24px", fontWeight: 500 }}>
-                        Gen QR Code
-                    </Typography>
+                    <Typography sx={{ fontSize: "24px", fontWeight: 500 }}>Gen QR Code</Typography>
                     <IconButton onClick={() => setQrModalOpen(false)} sx={{ color: "#9E9E9E" }}>
                         <CloseIcon sx={{ fontSize: 36 }} />
                     </IconButton>
@@ -570,7 +612,7 @@ const ElectronicCardPage = () => {
                                 py: 2.5,
                                 px: 2,
                                 textAlign: "center",
-                                boxSizing: "border-box"
+                                boxSizing: "border-box",
                             }}
                         >
                             <Typography
@@ -579,21 +621,35 @@ const ElectronicCardPage = () => {
                                     fontSize: "28px",
                                     lineHeight: 1.25,
                                     fontWeight: 600,
-                                    fontFamily: "'Prompt', 'Sarabun', sans-serif"
                                 }}
                             >
                                 {activeSchool}
                             </Typography>
-                            <Typography sx={{ mt: 1, fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "16px", fontWeight: 500 }}>
-                                ตำบล{schoolDetails.subDistrict} อำเภอ{schoolDetails.district} จังหวัด{schoolDetails.province}
+                            <Typography sx={{ mt: 1, fontSize: "16px", fontWeight: 500 }}>
+                                ตำบล{schoolDetails.subDistrict} อำเภอ{schoolDetails.district} จังหวัด
+                                {schoolDetails.province}
                             </Typography>
                         </Box>
 
-                        <Box sx={{ width: 330, height: 330, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" style={{ width: "100%", height: "100%", objectFit: "contain" }} />}
+                        <Box
+                            sx={{
+                                width: 330,
+                                height: 330,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            {qrCodeUrl && (
+                                <img
+                                    src={qrCodeUrl}
+                                    alt="QR Code"
+                                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                />
+                            )}
                         </Box>
 
-                        <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "16px", color: "#777777" }}>
+                        <Typography sx={{ fontSize: "16px", color: "#777777" }}>
                             สแกน QR Code เพื่อดาวน์โหลดบัตรประกันนักเรียน
                         </Typography>
                     </Box>
@@ -610,9 +666,8 @@ const ElectronicCardPage = () => {
                             flex: 1,
                             height: 48,
                             bgcolor: "#13A8E8",
-                            fontFamily: "'Prompt', 'Sarabun', sans-serif",
                             fontSize: "18px",
-                            "&:hover": { bgcolor: "#0C95D1" }
+                            "&:hover": { bgcolor: "#0C95D1" },
                         }}
                     >
                         ดาวน์โหลดรูปภาพ
@@ -627,9 +682,8 @@ const ElectronicCardPage = () => {
                             height: 48,
                             borderColor: "#007AC1",
                             color: "#007AC1",
-                            fontFamily: "'Prompt', 'Sarabun', sans-serif",
                             fontSize: "18px",
-                            "&:hover": { borderColor: "#005b90", bgcolor: "#F2FBFF" }
+                            "&:hover": { borderColor: "#005b90", bgcolor: "#F2FBFF" },
                         }}
                     >
                         แชร์
