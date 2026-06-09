@@ -58,7 +58,7 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "300",
         compensationIPD: "500",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
+        paymentStatus: "ปกติ",
     },
     {
         applicationNo: "690300002",
@@ -88,7 +88,7 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "300",
         compensationIPD: "500",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
+        paymentStatus: "ปกติ",
     },
     {
         applicationNo: "690300003",
@@ -118,7 +118,7 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "350",
         compensationIPD: "600",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
+        paymentStatus: "ปกติ",
     },
     {
         applicationNo: "690300004",
@@ -148,7 +148,7 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "300",
         compensationIPD: "500",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
+        paymentStatus: "ปกติ",
     },
     {
         applicationNo: "690300005",
@@ -178,7 +178,7 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "350",
         compensationIPD: "600",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
+        paymentStatus: "ปกติ",
     },
     {
         applicationNo: "690300006",
@@ -208,24 +208,54 @@ export const mockStudents: Student[] = [
         compensationOPDHospital: "300",
         compensationIPD: "500",
         insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
-        paymentStatus: "ปกติ"
-    }
+        paymentStatus: "ปกติ",
+    },
+    {
+        applicationNo: "690300007",
+        refNo: "68230007",
+        policyNo: "230001/P001005320",
+        schoolName: "โรงเรียนสตรีวิทยา",
+        schoolSubDistrict: "ปทุมวัน",
+        schoolDistrict: "ปทุมวัน",
+        province: "กรุงเทพมหานคร",
+        gradeLevel: "ชั้นมัธยมศึกษาปีที่ 3",
+        classroom: "3/1",
+        citizenId: "AA1234567",
+        title: "เด็กชาย",
+        firstName: "ปีเตอร์",
+        lastName: "ปาร์คเกอร์",
+        effectiveDate: "01/09/2568",
+        expiryDate: "31/08/2569 เวลา 24.00 น.",
+        coverageLimit: "10,000",
+        planName: "แผนชดเชย+สุขภาพ",
+        planType: "Dead Only",
+        coverageTotal: "10,000",
+        deathGeneral: "40,000",
+        murderOrAssault: "40,000",
+        vehicleAccident: "40,000",
+        illnessDeath: "10,000",
+        compensationOPDClinic: "150",
+        compensationOPDHospital: "350",
+        compensationIPD: "600",
+        insurer: "บริษัท บางกอกสหประกันภัย จำกัด (มหาชน)",
+        paymentStatus: "ปกติ",
+    },
 ];
 
 export const getUniqueSchools = () => {
-    return Array.from(new Set(mockStudents.map(s => s.schoolName)));
+    return Array.from(new Set(mockStudents.map((s) => s.schoolName)));
 };
 
 export const getUniqueGrades = (schoolName?: string) => {
-    const filtered = schoolName ? mockStudents.filter(s => s.schoolName === schoolName) : mockStudents;
-    return Array.from(new Set(filtered.map(s => s.gradeLevel)));
+    const filtered = schoolName ? mockStudents.filter((s) => s.schoolName === schoolName) : mockStudents;
+    return Array.from(new Set(filtered.map((s) => s.gradeLevel)));
 };
 
 export const getUniqueClassrooms = (schoolName?: string, gradeLevel?: string) => {
     let filtered = mockStudents;
-    if (schoolName) filtered = filtered.filter(s => s.schoolName === schoolName);
-    if (gradeLevel) filtered = filtered.filter(s => s.gradeLevel === gradeLevel);
-    return Array.from(new Set(filtered.map(s => s.classroom)));
+    if (schoolName) filtered = filtered.filter((s) => s.schoolName === schoolName);
+    if (gradeLevel) filtered = filtered.filter((s) => s.gradeLevel === gradeLevel);
+    return Array.from(new Set(filtered.map((s) => s.classroom)));
 };
 
 export const searchStudents = (filters: {
@@ -235,7 +265,7 @@ export const searchStudents = (filters: {
     citizenId?: string;
     searchText?: string;
 }) => {
-    return mockStudents.filter(student => {
+    return mockStudents.filter((student) => {
         if (filters.schoolName && student.schoolName !== filters.schoolName) return false;
         if (filters.gradeLevel && student.gradeLevel !== filters.gradeLevel) return false;
         if (filters.classroom && student.classroom !== filters.classroom) return false;

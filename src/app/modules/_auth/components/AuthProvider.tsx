@@ -23,7 +23,9 @@ const CheckArray = (source: string | string[] | undefined | null): string[] => {
 };
 
 const isPublicStudentRoute = () => {
-    return window.location.pathname.startsWith("/student/search") || window.location.pathname.startsWith("/student/card");
+    return (
+        window.location.pathname.startsWith("/student/search") || window.location.pathname.startsWith("/student/card")
+    );
 };
 
 export const AuthProvider = ({ children, oidcUserManager }: AuthProviderProps) => {
@@ -120,7 +122,8 @@ export const AuthProvider = ({ children, oidcUserManager }: AuthProviderProps) =
             return;
         }
 
-        const isDemoMode = window.location.hostname.includes("github.io") || window.location.search.includes("demo=true");
+        const isDemoMode =
+            window.location.hostname.includes("github.io") || window.location.search.includes("demo=true");
         if (isDemoMode) {
             return;
         }
@@ -172,7 +175,8 @@ export const AuthProvider = ({ children, oidcUserManager }: AuthProviderProps) =
                 return;
             }
 
-            const isDemoMode = window.location.hostname.includes("github.io") || window.location.search.includes("demo=true");
+            const isDemoMode =
+                window.location.hostname.includes("github.io") || window.location.search.includes("demo=true");
             if (isDemoMode) {
                 setIsAuthenticated(true);
                 setAuthTokens("demo-token");

@@ -95,11 +95,11 @@ export const AuthRoutes: RouteMapType[] = [
     {
         path: "/student/search",
         title: "ค้นหาบัตรประกัน PA นักเรียน",
-        element: <StudentSearch />
+        element: <StudentSearch />,
     },
     {
         path: "/student/card/:citizenId",
         title: "บัตรประกันภัยอุบัติเหตุ",
-        element: <StudentCard />
-    }
+        element: <StudentCard />,
+    },
 ];

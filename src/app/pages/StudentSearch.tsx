@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Button, Paper, TextField, Typography } from "@mui/material";
+import { Box, Button, Paper, TextField, Typography, Collapse } from "@mui/material";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import BusinessCenterOutlinedIcon from "@mui/icons-material/BusinessCenterOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -8,17 +8,27 @@ import DownloadIcon from "@mui/icons-material/Download";
 import HealthAndSafetyOutlinedIcon from "@mui/icons-material/HealthAndSafetyOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import ShareIcon from "@mui/icons-material/Share";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import Swal from "sweetalert2";
 
 import { searchStudents, Student } from "../modules/_common/mockStudentData";
 import MobileFooter from "../modules/_common/components/MobileFooter";
 
-const normalizeCitizenId = (value: string) => value.replace(/\D/g, "").slice(0, 13);
+const normalizeCitizenId = (value: string) => {
+    const normalized = value.replace(/[^a-zA-Z0-9]/g, "");
+    if (/^\d+$/.test(normalized)) {
+        return normalized.slice(0, 13);
+    }
+    return normalized.slice(0, 15).toUpperCase();
+};
 
 const formatCitizenId = (id: string) => {
     const digits = normalizeCitizenId(id);
-    if (digits.length !== 13) return id;
-    return `${digits.slice(0, 1)}-${digits.slice(1, 5)}-${digits.slice(5, 10)}-${digits.slice(10, 12)}-${digits.slice(12)}`;
+    if (digits.length !== 13 || !/^\d+$/.test(digits)) return id;
+    return `${digits.slice(0, 1)}-${digits.slice(1, 5)}-${digits.slice(5, 10)}-${digits.slice(10, 12)}-${digits.slice(
+        12
+    )}`;
 };
 
 const maskCitizenId = (id: string) => {
@@ -113,58 +123,82 @@ const drawCardToCanvas = (student: Student, onComplete: () => void) => {
         Swal.fire({
             icon: "error",
             title: "ดาวน์โหลดล้มเหลว",
-            text: "ไม่สามารถโหลดรูปภาพพื้นหลังบัตรได้"
+            text: "ไม่สามารถโหลดรูปภาพพื้นหลังบัตรได้",
         });
     };
 };
 
 const CardPreview = ({ student }: { student: Student }) => {
-    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [imgSrc, setImgSrc] = useState<string>("");
 
     useEffect(() => {
-        if (!canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-
         const img = new Image();
         img.src = `${import.meta.env.BASE_URL}template-card.png`;
         img.onload = () => {
-            void drawCardWithFonts(ctx, img, student);
+            const canvas = document.createElement("canvas");
+            canvas.width = 838;
+            canvas.height = 531;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+
+            void drawCardWithFonts(ctx, img, student).then(() => {
+                const dataUrl = canvas.toDataURL("image/png");
+                setImgSrc(dataUrl);
+            });
         };
     }, [student]);
 
     return (
         <Box
-        sx={{
-            width: "100%",
-            maxWidth: 400,
-            borderRadius: "8px",
-            overflow: "hidden",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)"
-        }}
-    >
-            <canvas
-                ref={canvasRef}
-                width={838}
-                height={531}
-                style={{
-                    width: "100%",
-                    height: "auto",
-                    display: "block"
-                }}
-            />
+            sx={{
+                width: "100%",
+                maxWidth: 510,
+                borderRadius: "8px",
+                overflow: "hidden",
+                bgcolor: "#FFFFFF",
+            }}
+        >
+            {imgSrc ? (
+                <img
+                    src={imgSrc}
+                    alt="Digital Insurance Card"
+                    style={{
+                        width: "100%",
+                        height: "auto",
+                        display: "block",
+                    }}
+                />
+            ) : (
+                <Box sx={{ width: "100%", height: 0, pb: "63.36%" }} />
+            )}
         </Box>
     );
 };
 
-const DetailRow = ({ label, value, accent = false }: { label: string; value: React.ReactNode; accent?: boolean }) => (
-    <Box sx={{ display: "grid", gridTemplateColumns: "132px 1fr", gap: 1, alignItems: "start", py: 0.15 }}>
-        <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "13px", fontWeight: 700, color: "#2F2F2F" }}>
+const DetailRow = ({
+    label,
+    value,
+    accent = false,
+    labelWidth = "132px",
+}: {
+    label: string;
+    value: React.ReactNode;
+    accent?: boolean;
+    labelWidth?: string;
+}) => (
+    <Box sx={{ display: "grid", gridTemplateColumns: `${labelWidth} 1fr`, gap: 1, alignItems: "start", py: 0.15 }}>
+        <Typography sx={{ fontSize: "13px", fontWeight: 700, color: "#2F2F2F", whiteSpace: "nowrap" }}>
             {label}
         </Typography>
-        <Typography sx={{ fontFamily: "'Prompt', 'Sarabun', sans-serif", fontSize: "13px", fontWeight: 500, color: accent ? "#008BD2" : "#707070", textAlign: "right", wordBreak: "break-word" }}>
+        <Typography
+            sx={{
+                fontSize: "13px",
+                fontWeight: 500,
+                color: accent ? "#008BD2" : "#707070",
+                textAlign: "right",
+                wordBreak: "break-word",
+            }}
+        >
             {value}
         </Typography>
     </Box>
@@ -172,6 +206,8 @@ const DetailRow = ({ label, value, accent = false }: { label: string; value: Rea
 
 const StudentSearch = () => {
     const [searchParams] = useSearchParams();
+    const [coverageOpen, setCoverageOpen] = useState(true);
+    const [benefitsOpen, setBenefitsOpen] = useState(true);
     const urlSchool = searchParams.get("school") || "โรงเรียนก้อนแก้วพิทยาคม";
     const schoolSubtitle = getSchoolSubtitle(urlSchool);
     const [citizenId, setCitizenId] = useState<string>("");
@@ -197,7 +233,7 @@ const StudentSearch = () => {
             Swal.fire({
                 icon: "warning",
                 title: "กรุณากรอกข้อมูล",
-                text: "กรุณาป้อนเลขบัตรประชาชนหรือ Passport นักเรียน"
+                text: "กรุณาป้อนเลขบัตรประชาชนหรือ Passport นักเรียน",
             });
             return;
         }
@@ -211,7 +247,7 @@ const StudentSearch = () => {
                 icon: "error",
                 title: "ไม่พบข้อมูลบัตรประกันภัย",
                 text: "กรุณาตรวจสอบเลขบัตรประชาชนใหม่อีกครั้ง",
-                confirmButtonColor: "#03A9F4"
+                confirmButtonColor: "#03A9F4",
             });
         }
     };
@@ -222,7 +258,7 @@ const StudentSearch = () => {
             title: "กำลังเตรียมดาวน์โหลด...",
             text: "กรุณารอสักครู่",
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            didOpen: () => Swal.showLoading(),
         });
         drawCardToCanvas(foundStudent, () => Swal.close());
     };
@@ -233,20 +269,24 @@ const StudentSearch = () => {
             icon: "success",
             title: "คัดลอกลิงก์แชร์เรียบร้อยแล้ว!",
             timer: 1800,
-            showConfirmButton: false
+            showConfirmButton: false,
         });
     };
 
     const handleShareCard = () => {
         if (!foundStudent) return;
-        const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}student/search?school=${encodeURIComponent(foundStudent.schoolName)}&citizenId=${foundStudent.citizenId}`;
+        const shareUrl = `${window.location.origin}${
+            import.meta.env.BASE_URL
+        }student/search?school=${encodeURIComponent(foundStudent.schoolName)}&citizenId=${foundStudent.citizenId}`;
 
         if (navigator.share) {
-            navigator.share({
-                title: `บัตรประกันภัย PA ของ ${foundStudent.firstName}`,
-                text: `ตรวจสอบสิทธิ์บัตรประกันภัย PA ของ ${foundStudent.schoolName}`,
-                url: shareUrl
-            }).catch(() => copyToClipboard(shareUrl));
+            navigator
+                .share({
+                    title: `บัตรประกันภัย PA ของ ${foundStudent.firstName}`,
+                    text: `ตรวจสอบสิทธิ์บัตรประกันภัย PA ของ ${foundStudent.schoolName}`,
+                    url: shareUrl,
+                })
+                .catch(() => copyToClipboard(shareUrl));
             return;
         }
 
@@ -262,21 +302,20 @@ const StudentSearch = () => {
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                fontFamily: "'Prompt', 'Sarabun', sans-serif",
                 pb: "78px",
-                width: "100%"
+                width: "100%",
             }}
         >
             <Box
                 sx={{
                     width: "100%",
-                    maxWidth: "500px",
+                    maxWidth: "560px",
                     px: 2,
                     pt: hasSearched && foundStudent ? 6 : { xs: 23, sm: 28 },
                     boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 2
+                    gap: 2,
                 }}
             >
                 <Paper
@@ -284,39 +323,58 @@ const StudentSearch = () => {
                     elevation={0}
                     onSubmit={handleSearch}
                     sx={{
-                        p: "20px 32px 28px",
-                        borderRadius: "4px",
+                        p: "20px 24px 28px",
+                        borderRadius: "8px",
                         bgcolor: "#FFFFFF",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        boxShadow: "0px 2px 5px rgba(0,0,0,0.08)"
+                        boxShadow: "0px 2px 8px rgba(0,0,0,0.1)",
                     }}
                 >
-                    <Typography sx={{ fontSize: "26px", lineHeight: "36px", fontWeight: 600, textAlign: "center", color: "#000000" }}>
+                    <Typography
+                        sx={{
+                            fontSize: "26px",
+                            lineHeight: "36px",
+                            fontWeight: 600,
+                            textAlign: "center",
+                            color: "#000000",
+                        }}
+                    >
                         {urlSchool}
                     </Typography>
-                    <Typography sx={{ mt: 1.2, mb: 2, fontSize: "13px", lineHeight: "20px", fontWeight: 600, textAlign: "center", color: "#000000" }}>
+                    <Typography
+                        sx={{
+                            mt: 1.2,
+                            mb: 2,
+                            fontSize: "13px",
+                            lineHeight: "20px",
+                            fontWeight: 600,
+                            textAlign: "center",
+                            color: "#000000",
+                        }}
+                    >
                         {schoolSubtitle}
                     </Typography>
                     <TextField
                         fullWidth
                         variant="outlined"
                         placeholder="ค้นหาเลขบัตรประชาชน / Passport นักเรียน"
-                        value={citizenId.length === 13 ? formatCitizenId(citizenId) : citizenId}
+                        value={
+                            citizenId.length === 13 && /^\d+$/.test(citizenId) ? formatCitizenId(citizenId) : citizenId
+                        }
                         onChange={(e) => setCitizenId(normalizeCitizenId(e.target.value))}
-                        inputProps={{ inputMode: "numeric" }}
+                        inputProps={{ inputMode: "text" }}
                         sx={{
                             mb: 1.5,
                             "& .MuiOutlinedInput-root": {
                                 borderRadius: "4px",
                                 height: "48px",
-                                fontFamily: "'Prompt', 'Sarabun', sans-serif",
                                 fontSize: "16px",
                                 "& fieldset": { borderColor: "#007AC1" },
                                 "&:hover fieldset": { borderColor: "#007AC1" },
-                                "&.Mui-focused fieldset": { borderColor: "#007AC1", borderWidth: "1px" }
-                            }
+                                "&.Mui-focused fieldset": { borderColor: "#007AC1", borderWidth: "1px" },
+                            },
                         }}
                     />
                     <Button
@@ -331,99 +389,329 @@ const StudentSearch = () => {
                             borderRadius: "4px",
                             fontSize: "18px",
                             fontWeight: 700,
-                            fontFamily: "'Prompt', 'Sarabun', sans-serif",
                             boxShadow: "0px 2px 4px rgba(0,0,0,0.22)",
-                            "&:hover": { bgcolor: "#0C95D1" }
+                            "&:hover": { bgcolor: "#0C95D1" },
                         }}
                     >
                         ค้นหา
                     </Button>
 
                     {(!hasSearched || !foundStudent) && (
-                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 1, mt: 3 }}>
-                            <Box sx={{ width: 56, height: 56, bgcolor: "#E2F2FF", borderRadius: "50%", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                textAlign: "center",
+                                gap: 1,
+                                mt: 3,
+                                width: "100%",
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 56,
+                                    height: 56,
+                                    bgcolor: "#E2F2FF",
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                }}
+                            >
                                 <SearchIcon sx={{ color: "#0093FF", fontSize: 32 }} />
                             </Box>
-                            <Typography sx={{ fontWeight: 700, fontSize: "17px", color: "#000000" }}>ค้นหาข้อมูลนักเรียน</Typography>
-                            <Typography sx={{ fontWeight: 500, fontSize: "13px", color: "#707070" }}>กรุณาป้อนข้อมูลในช่องค้นหาด้านบน</Typography>
-                            <Typography sx={{ fontWeight: 500, fontSize: "13px", color: "#707070" }}>สามารถค้นหาด้วยเลขบัตรประชาชน / Passport นักเรียน</Typography>
+                            <Typography sx={{ fontWeight: 700, fontSize: "17px", color: "#000000" }}>
+                                ค้นหาข้อมูลนักเรียน
+                            </Typography>
+                            <Typography sx={{ fontWeight: 500, fontSize: "13px", color: "#707070" }}>
+                                กรุณาป้อนข้อมูลในช่องค้นหาด้านบน
+                            </Typography>
+                            <Typography sx={{ fontWeight: 500, fontSize: "13px", color: "#707070", mb: 2 }}>
+                                สามารถค้นหาด้วยเลขบัตรประชาชน / Passport นักเรียน
+                            </Typography>
+
+                            <Paper
+                                variant="outlined"
+                                sx={{
+                                    p: 2,
+                                    width: "100%",
+                                    maxWidth: "400px",
+                                    borderColor: "#E2F2FF",
+                                    bgcolor: "#F9FCFF",
+                                    borderRadius: "8px",
+                                    textAlign: "left",
+                                }}
+                            >
+                                <Typography
+                                    sx={{
+                                        fontSize: "12px",
+                                        fontWeight: 700,
+                                        color: "#007AC1",
+                                        mb: 1.5,
+                                        textAlign: "center",
+                                    }}
+                                >
+                                    💡 ข้อมูลตัวอย่างสำหรับทดสอบระบบ (Mock Test Data)
+                                </Typography>
+                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                    <Box
+                                        onClick={() => setCitizenId("7640543275347")}
+                                        sx={{
+                                            p: 1,
+                                            bgcolor: "#FFFFFF",
+                                            border: "1px solid #E2F2FF",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s",
+                                            "&:hover": {
+                                                borderColor: "#007AC1",
+                                                bgcolor: "rgba(19, 168, 232, 0.04)",
+                                            },
+                                        }}
+                                    >
+                                        <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#707070" }}>
+                                            เลขประจำตัวประชาชน (ด.ช. ธรณ์วัฒน์)
+                                        </Typography>
+                                        <Typography
+                                            sx={{
+                                                fontSize: "14px",
+                                                fontWeight: 700,
+                                                color: "#333333",
+                                                fontFamily: "monospace",
+                                            }}
+                                        >
+                                            7640543275347
+                                        </Typography>
+                                    </Box>
+                                    <Box
+                                        onClick={() => setCitizenId("AA1234567")}
+                                        sx={{
+                                            p: 1,
+                                            bgcolor: "#FFFFFF",
+                                            border: "1px solid #E2F2FF",
+                                            borderRadius: "6px",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s",
+                                            "&:hover": {
+                                                borderColor: "#007AC1",
+                                                bgcolor: "rgba(19, 168, 232, 0.04)",
+                                            },
+                                        }}
+                                    >
+                                        <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#707070" }}>
+                                            หนังสือเดินทาง / Passport (ด.ช. ปีเตอร์)
+                                        </Typography>
+                                        <Typography
+                                            sx={{
+                                                fontSize: "14px",
+                                                fontWeight: 700,
+                                                color: "#333333",
+                                                fontFamily: "monospace",
+                                            }}
+                                        >
+                                            AA1234567
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <Typography sx={{ fontSize: "11px", color: "#888888", mt: 1.5, textAlign: "center" }}>
+                                    คลิกที่กล่องเพื่อนำข้อมูลไปวางในช่องค้นหาอัตโนมัติ
+                                </Typography>
+                            </Paper>
+                        </Box>
+                    )}
+
+                    {hasSearched && foundStudent && (
+                        <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 2, mt: 3 }}>
+                            <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                                <CardPreview student={foundStudent} />
+                            </Box>
+
+                            <Box sx={{ display: "flex", justifyContent: "center", gap: 6, py: 1 }}>
+                                <Box
+                                    onClick={handleDownloadCard}
+                                    sx={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)",
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            mb: 0.5,
+                                        }}
+                                    >
+                                        <DownloadIcon sx={{ color: "#FFFFFF", fontSize: 17 }} />
+                                    </Box>
+                                    <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>บันทึกรูปบัตร</Typography>
+                                </Box>
+                                <Box
+                                    onClick={handleShareCard}
+                                    sx={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)",
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            mb: 0.5,
+                                        }}
+                                    >
+                                        <ShareIcon sx={{ color: "#FFFFFF", fontSize: 17 }} />
+                                    </Box>
+                                    <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>แชร์</Typography>
+                                </Box>
+                            </Box>
+
+                            <Box sx={{ width: "100%", pt: 1 }}>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                    <BadgeOutlinedIcon sx={{ fontSize: 21 }} />
+                                    <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>
+                                        ข้อมูลผู้เอาประกัน
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
+                                <DetailRow label="กรมธรรม์เลขที่ :" value={foundStudent.policyNo} accent />
+                                <DetailRow label="เลขอ้างอิง :" value={foundStudent.refNo} accent />
+                                <DetailRow label="สถานศึกษา :" value={foundStudent.schoolName} />
+                                <DetailRow label="ประเภทแผน :" value={foundStudent.planType} />
+                                <DetailRow label="วันที่มีผลบังคับ :" value={foundStudent.effectiveDate} />
+                                <DetailRow label="วันที่สิ้นสุด :" value={foundStudent.expiryDate} />
+                                <DetailRow label="ชื่อผู้เอาประกัน :" value={fullName(foundStudent)} accent />
+                                <DetailRow label="เลขบัตรประชาชน" value={maskCitizenId(foundStudent.citizenId)} />
+                                <DetailRow label="ระดับชั้น :" value={foundStudent.gradeLevel} />
+                                <DetailRow
+                                    label="สถานะ :"
+                                    value={
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: 0.5,
+                                                color: "#0FAE45",
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            <CheckCircleIcon sx={{ fontSize: 14 }} /> มีผลบังคับ
+                                        </Box>
+                                    }
+                                />
+                            </Box>
+
+                            <Box sx={{ width: "100%", pt: 1 }}>
+                                <Box
+                                    onClick={() => setCoverageOpen(!coverageOpen)}
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        cursor: "pointer",
+                                        mt: 1.5,
+                                        mb: 1,
+                                    }}
+                                >
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <BusinessCenterOutlinedIcon sx={{ fontSize: 22 }} />
+                                        <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>ความคุ้มครอง</Typography>
+                                    </Box>
+                                    {coverageOpen ? (
+                                        <ExpandLessIcon sx={{ color: "#707070" }} />
+                                    ) : (
+                                        <ExpandMoreIcon sx={{ color: "#707070" }} />
+                                    )}
+                                </Box>
+                                <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
+                                <Collapse in={coverageOpen}>
+                                    <DetailRow label="ทุนประกัน" value={`${foundStudent.coverageTotal} บาท`} />
+                                </Collapse>
+                                <Box
+                                    onClick={() => setBenefitsOpen(!benefitsOpen)}
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        cursor: "pointer",
+                                        mt: 1.5,
+                                        mb: 1,
+                                    }}
+                                >
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                        <HealthAndSafetyOutlinedIcon sx={{ fontSize: 22 }} />
+                                        <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>
+                                            สิทธิประโยชน์ความคุ้มครอง
+                                        </Typography>
+                                    </Box>
+                                    {benefitsOpen ? (
+                                        <ExpandLessIcon sx={{ color: "#707070" }} />
+                                    ) : (
+                                        <ExpandMoreIcon sx={{ color: "#707070" }} />
+                                    )}
+                                </Box>
+                                <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
+                                <Collapse in={benefitsOpen}>
+                                    <DetailRow
+                                        label="เสียชีวิตเนื่องจากอุบัติเหตุทั่วไป"
+                                        value={`${foundStudent.deathGeneral} บาท`}
+                                        labelWidth="220px"
+                                    />
+                                    <DetailRow
+                                        label="ทุพพลภาพโดยถาวร"
+                                        value={`${foundStudent.murderOrAssault} บาท`}
+                                        labelWidth="220px"
+                                    />
+                                    <DetailRow
+                                        label="ฆาตกรรม/ถูกทำร้ายร่างกาย"
+                                        value={`${foundStudent.vehicleAccident} บาท`}
+                                        labelWidth="220px"
+                                    />
+                                    <DetailRow
+                                        label="เสียชีวิตเนื่องจากโรคภัยไข้เจ็บ"
+                                        value={`${foundStudent.illnessDeath} บาท`}
+                                        labelWidth="220px"
+                                    />
+                                </Collapse>
+                            </Box>
+
+                            <Box
+                                sx={{
+                                    width: "100%",
+                                    bgcolor: "#36B9E5",
+                                    borderRadius: "5px",
+                                    px: 2,
+                                    py: 1.6,
+                                    boxSizing: "border-box",
+                                    color: "#FFFFFF",
+                                    textAlign: "center",
+                                    boxShadow: "0px 2px 5px rgba(0,0,0,0.18)",
+                                    mt: 1,
+                                }}
+                            >
+                                <Typography sx={{ fontSize: "12px", lineHeight: 1.8 }}>
+                                    รายละเอียดข้อกำหนดและเงื่อนไขของความคุ้มครองรวมหรือยกเว้นไม่คุ้มครองในกรมธรรม์ประกันภัย
+                                    เป็นไปตามที่บริษัทผู้รับประกันออกให้ผู้ถือกรมธรรม์และ/หรือผู้เอาประกัน
+                                </Typography>
+                            </Box>
                         </Box>
                     )}
                 </Paper>
-
-                {hasSearched && foundStudent && (
-                    <>
-                        <Box sx={{ width: "100%", display: "flex", justifyContent: "center", mt: 1 }}>
-                            <CardPreview student={foundStudent} />
-                        </Box>
-
-                        <Box sx={{ display: "flex", justifyContent: "center", gap: 6, py: 1 }}>
-                            <Box onClick={handleDownloadCard} sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
-                                <Box sx={{ width: 32, height: 32, background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)", borderRadius: "50%", display: "flex", justifyContent: "center", alignItems: "center", mb: 0.5 }}>
-                                    <DownloadIcon sx={{ color: "#FFFFFF", fontSize: 17 }} />
-                                </Box>
-                                <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>บันทึกรูปบัตร</Typography>
-                            </Box>
-                            <Box onClick={handleShareCard} sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
-                                <Box sx={{ width: 32, height: 32, background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)", borderRadius: "50%", display: "flex", justifyContent: "center", alignItems: "center", mb: 0.5 }}>
-                                    <ShareIcon sx={{ color: "#FFFFFF", fontSize: 17 }} />
-                                </Box>
-                                <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>แชร์</Typography>
-                            </Box>
-                        </Box>
-
-                        <Paper elevation={1} sx={{ width: "100%", p: "14px 10px 16px", borderRadius: "5px", bgcolor: "#FFFFFF", boxSizing: "border-box", boxShadow: "0px 2px 5px rgba(0,0,0,0.22)" }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                                <BadgeOutlinedIcon sx={{ fontSize: 21 }} />
-                                <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>ข้อมูลผู้เอาประกัน</Typography>
-                            </Box>
-                            <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
-                            <DetailRow label="กรมธรรม์เลขที่ :" value={foundStudent.policyNo} accent />
-                            <DetailRow label="เลขอ้างอิง :" value={foundStudent.refNo} accent />
-                            <DetailRow label="สถานศึกษา :" value={foundStudent.schoolName} />
-                            <DetailRow label="ประเภทแผน :" value={foundStudent.planType} />
-                            <DetailRow label="วันที่มีผลบังคับ :" value={foundStudent.effectiveDate} />
-                            <DetailRow label="วันที่สิ้นสุด :" value={foundStudent.expiryDate} />
-                            <DetailRow label="ชื่อผู้เอาประกัน :" value={fullName(foundStudent)} accent />
-                            <DetailRow label="เลขบัตรประชาชน" value={maskCitizenId(foundStudent.citizenId)} />
-                            <DetailRow label="ระดับชั้น :" value={foundStudent.gradeLevel} />
-                            <DetailRow
-                                label="สถานะ :"
-                                value={
-                                    <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, color: "#0FAE45", fontWeight: 700 }}>
-                                        <CheckCircleIcon sx={{ fontSize: 14 }} /> มีผลบังคับ
-                                    </Box>
-                                }
-                            />
-                            <DetailRow label="ประเภทแผน :" value={foundStudent.planType} />
-                        </Paper>
-
-                        <Paper elevation={1} sx={{ width: "100%", p: "14px 10px 16px", borderRadius: "5px", bgcolor: "#FFFFFF", boxSizing: "border-box", boxShadow: "0px 2px 5px rgba(0,0,0,0.18)" }}>
-                            <DetailRow label="ประเภทแผน" value={foundStudent.planType} />
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5, mb: 1 }}>
-                                <BusinessCenterOutlinedIcon sx={{ fontSize: 22 }} />
-                                <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>ความคุ้มครอง</Typography>
-                            </Box>
-                            <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
-                            <DetailRow label="ทุนประกัน" value={`${foundStudent.coverageTotal} บาท`} />
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5, mb: 1 }}>
-                                <HealthAndSafetyOutlinedIcon sx={{ fontSize: 22 }} />
-                                <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>สิทธิประโยชน์ความคุ้มครอง</Typography>
-                            </Box>
-                            <Box sx={{ borderTop: "1px solid #008BD2", mb: 1.2 }} />
-                            <DetailRow label="เสียชีวิตเนื่องจากอุบัติเหตุทั่วไป" value={`${foundStudent.deathGeneral} บาท`} />
-                            <DetailRow label="ทุพพลภาพโดยถาวร" value={`${foundStudent.murderOrAssault} บาท`} />
-                            <DetailRow label="ฆาตกรรม/ถูกทำร้ายร่างกาย" value={`${foundStudent.vehicleAccident} บาท`} />
-                            <DetailRow label="เสียชีวิตเนื่องจากโรคภัยไข้เจ็บ" value={`${foundStudent.illnessDeath} บาท`} />
-                        </Paper>
-
-                        <Box sx={{ width: "100%", bgcolor: "#36B9E5", borderRadius: "5px", px: 2, py: 1.6, boxSizing: "border-box", color: "#FFFFFF", textAlign: "center", boxShadow: "0px 2px 5px rgba(0,0,0,0.18)" }}>
-                            <Typography sx={{ fontSize: "12px", lineHeight: 1.8 }}>
-                                รายละเอียดข้อกำหนดและเงื่อนไขของความคุ้มครองรวมหรือยกเว้นไม่คุ้มครองในกรมธรรม์ประกันภัย เป็นไปตามที่บริษัทผู้รับประกันออกให้ผู้ถือกรมธรรม์และ/หรือผู้เอาประกัน
-                            </Typography>
-                        </Box>
-                    </>
-                )}
             </Box>
 
             <MobileFooter />
