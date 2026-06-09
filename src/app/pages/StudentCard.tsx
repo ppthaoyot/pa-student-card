@@ -226,7 +226,7 @@ const StudentCard = () => {
                         "&:hover": { bgcolor: "#053e6d" },
                     }}
                 >
-                    ดาวน์โหลดภาพบัตรประกันภัย
+                    บันทึก
                 </Button>
                 <Button
                     fullWidth
