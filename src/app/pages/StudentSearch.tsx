@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Button, Paper, TextField, Typography, Collapse } from "@mui/material";
+import { Box, Button, Paper, TextField, Typography, Collapse, Dialog, IconButton } from "@mui/material";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import BusinessCenterOutlinedIcon from "@mui/icons-material/BusinessCenterOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -10,9 +10,12 @@ import SearchIcon from "@mui/icons-material/Search";
 import ShareIcon from "@mui/icons-material/Share";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import CloseIcon from "@mui/icons-material/Close";
 import Swal from "sweetalert2";
 
 import { searchStudents, Student } from "../modules/_common/mockStudentData";
+import { ensureSarabunFont } from "../modules/_common/canvasFontLoader";
 import MobileFooter from "../modules/_common/components/MobileFooter";
 
 const normalizeCitizenId = (value: string) => {
@@ -94,17 +97,7 @@ const drawCard = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, student:
 };
 
 const drawCardWithFonts = async (ctx: CanvasRenderingContext2D, img: HTMLImageElement, student: Student) => {
-    try {
-        await document.fonts.load("bold 15px 'Sarabun'");
-        await document.fonts.load("normal 15px 'Sarabun'");
-        await document.fonts.load("bold 21px 'Sarabun'");
-        await document.fonts.load("bold 12.5px 'Sarabun'");
-        await document.fonts.load("bold 14.5px 'Sarabun'");
-        await document.fonts.load("bold 11.5px 'Sarabun'");
-    } catch (e) {
-        console.warn("Failed to load Sarabun font", e);
-    }
-    await document.fonts?.ready;
+    await ensureSarabunFont();
     drawCard(ctx, img, student);
 };
 
@@ -138,7 +131,15 @@ const drawCardToCanvas = (student: Student, onComplete: () => void) => {
     };
 };
 
-const CardPreview = ({ student }: { student: Student }) => {
+const CardPreview = ({
+    student,
+    onZoom,
+    onImageReady,
+}: {
+    student: Student;
+    onZoom?: () => void;
+    onImageReady?: (src: string) => void;
+}) => {
     const [imgSrc, setImgSrc] = useState<string>("");
 
     useEffect(() => {
@@ -154,6 +155,7 @@ const CardPreview = ({ student }: { student: Student }) => {
             void drawCardWithFonts(ctx, img, student).then(() => {
                 const dataUrl = canvas.toDataURL("image/png");
                 setImgSrc(dataUrl);
+                onImageReady?.(dataUrl);
             });
         };
     }, [student]);
@@ -166,7 +168,9 @@ const CardPreview = ({ student }: { student: Student }) => {
                 borderRadius: "8px",
                 overflow: "hidden",
                 bgcolor: "#FFFFFF",
+                cursor: imgSrc && onZoom ? "pointer" : "default",
             }}
+            onClick={() => imgSrc && onZoom && onZoom()}
         >
             {imgSrc ? (
                 <img
@@ -223,6 +227,8 @@ const StudentSearch = () => {
     const [citizenId, setCitizenId] = useState<string>("");
     const [foundStudent, setFoundStudent] = useState<Student | null>(null);
     const [hasSearched, setHasSearched] = useState<boolean>(false);
+    const [zoomOpen, setZoomOpen] = useState(false);
+    const [zoomImgSrc, setZoomImgSrc] = useState<string>("");
 
     useEffect(() => {
         const urlCitizenId = searchParams.get("citizenId");
@@ -534,10 +540,40 @@ const StudentSearch = () => {
                     {hasSearched && foundStudent && (
                         <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 2, mt: 3 }}>
                             <Box sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
-                                <CardPreview student={foundStudent} />
+                                <CardPreview
+                                    student={foundStudent}
+                                    onZoom={() => setZoomOpen(true)}
+                                    onImageReady={(src) => setZoomImgSrc(src)}
+                                />
                             </Box>
 
                             <Box sx={{ display: "flex", justifyContent: "center", gap: 6, py: 1 }}>
+                                {/* ปุ่มขยาย — ปุ่มแรก */}
+                                <Box
+                                    onClick={() => setZoomOpen(true)}
+                                    sx={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            background: "linear-gradient(90deg, #25CFF2 0%, #0093FF 100%)",
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            mb: 0.5,
+                                        }}
+                                    >
+                                        <ZoomInIcon sx={{ color: "#FFFFFF", fontSize: 17 }} />
+                                    </Box>
+                                    <Typography sx={{ fontSize: "12px", fontWeight: 700 }}>ขยาย</Typography>
+                                </Box>
                                 <Box
                                     onClick={handleDownloadCard}
                                     sx={{
@@ -725,6 +761,99 @@ const StudentSearch = () => {
             </Box>
 
             <MobileFooter />
+
+            {/* Fullscreen Landscape Card Dialog */}
+            <Dialog
+                open={zoomOpen}
+                onClose={() => setZoomOpen(false)}
+                fullScreen
+                PaperProps={{
+                    sx: {
+                        bgcolor: "rgba(0, 0, 0, 0.92)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        p: 0,
+                        m: 0,
+                    },
+                }}
+            >
+                {/* Close Button */}
+                <IconButton
+                    onClick={() => setZoomOpen(false)}
+                    sx={{
+                        position: "fixed",
+                        top: 12,
+                        right: 12,
+                        zIndex: 10,
+                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                        color: "#FFFFFF",
+                        backdropFilter: "blur(4px)",
+                        "&:hover": { bgcolor: "rgba(255, 255, 255, 0.3)" },
+                    }}
+                >
+                    <CloseIcon />
+                </IconButton>
+
+                {/* Card Image — rotated to landscape on portrait mobile */}
+                {zoomImgSrc && (
+                    <Box
+                        sx={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            p: 1,
+                            "@media (orientation: portrait)": {
+                                "& > img": {
+                                    transform: "rotate(90deg)",
+                                    maxWidth: "100vh",
+                                    maxHeight: "100vw",
+                                    width: "auto",
+                                    height: "auto",
+                                },
+                            },
+                            "@media (orientation: landscape)": {
+                                "& > img": {
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                    width: "auto",
+                                    height: "auto",
+                                },
+                            },
+                        }}
+                    >
+                        <img
+                            src={zoomImgSrc}
+                            alt="Digital Insurance Card Fullscreen"
+                            style={{
+                                display: "block",
+                                objectFit: "contain",
+                                borderRadius: "8px",
+                                boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+                            }}
+                        />
+                    </Box>
+                )}
+
+                {/* Hint Text */}
+                <Typography
+                    sx={{
+                        position: "fixed",
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        textAlign: "center",
+                        color: "rgba(255,255,255,0.5)",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        pointerEvents: "none",
+                    }}
+                >
+                    แตะที่ใดก็ได้เพื่อปิด
+                </Typography>
+            </Dialog>
         </Box>
     );
 };
