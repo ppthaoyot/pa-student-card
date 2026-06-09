@@ -67,30 +67,30 @@ const StudentCard = () => {
             ctx.fillText(text, x, y);
         };
 
-        const xLeft = 80;
-        setFont(15, true);
-        ctx.fillText(`เลขที่อ้างอิง : ${targetStudent.refNo}`, xLeft, 145);
+        const xLeft = 40;
+        setFont(18, true);
+        ctx.fillText(`เลขที่อ้างอิง : ${targetStudent.refNo}`, xLeft, 170);
 
-        setFont(15, true);
-        ctx.fillText(`ผู้ถือกรมธรรม์ : ${targetStudent.schoolName}`, xLeft, 180);
+        setFont(18, true);
+        ctx.fillText(`ผู้ถือกรมธรรม์ : ${targetStudent.schoolName}`, xLeft, 205);
 
-        setFont(15, true);
-        ctx.fillText(`ระดับการศึกษา : ${targetStudent.gradeLevel}`, xLeft, 215);
+        setFont(18, true);
+        ctx.fillText(`ระดับการศึกษา : ${targetStudent.gradeLevel}`, xLeft, 240);
 
-        setFont(15, true);
+        setFont(18, true);
         ctx.fillText(
             `ชื่อผู้เอาประกัน : ${targetStudent.title}${targetStudent.firstName} ${targetStudent.lastName}`,
             xLeft,
-            250
+            275
         );
 
-        setFont(15, true);
-        ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 285);
+        setFont(18, true);
+        ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 310);
 
         ctx.fillStyle = "#07518c";
         fillTextCentered(
             `วงเงินค่ารักษาพยาบาล : ${targetStudent.coverageLimit} บาท / ต่ออุบัติเหตุแต่ละครั้ง`,
-            368,
+            375,
             680,
             27
         );
@@ -99,23 +99,24 @@ const StudentCard = () => {
             `(กรณีไม่เรียกร้องผลประโยชน์ค่ารักษาพยาบาล OPD อนามัย ${targetStudent.compensationOPDClinic} บาท OPD ${targetStudent.compensationOPDHospital} บาท IPD ${targetStudent.compensationIPD} บาท/ต่ออุบัติเหตุแต่ละครั้ง)`,
             400,
             720,
-            12.5
+            13,
+            false
         );
 
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = "#07518c";
         ctx.textAlign = "left";
-        setFont(13, true);
+        setFont(15, true);
         fillTextCentered(
             `วันที่มีผลบังคับ : ${targetStudent.effectiveDate}    วันที่สิ้นสุด : ${targetStudent.expiryDate}`,
-            440,
+            430,
             680,
-            13
+            18
         );
 
         ctx.fillStyle = "#333333";
         ctx.textAlign = "left";
         setFont(11.5, true);
-        ctx.fillText(`บริษัทผู้รับประกัน : ${targetStudent.insurer}`, 36, 488);
+        ctx.fillText(`บริษัทผู้รับประกัน : ${targetStudent.insurer}`, 36, 484);
     };
 
     const drawCardWithFonts = async (ctx: CanvasRenderingContext2D, img: HTMLImageElement, targetStudent: Student) => {

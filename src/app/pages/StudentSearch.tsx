@@ -80,38 +80,39 @@ const drawCard = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, student:
         ctx.fillText(text, x, y);
     };
 
-    const xLeft = 80;
-    setFont(15, true);
-    ctx.fillText(`เลขที่อ้างอิง : ${student.refNo}`, xLeft, 145);
-    ctx.fillText(`ผู้ถือกรมธรรม์ : ${student.schoolName}`, xLeft, 180);
-    ctx.fillText(`ระดับการศึกษา : ${student.gradeLevel}`, xLeft, 215);
-    ctx.fillText(`ชื่อผู้เอาประกัน : ${fullName(student)}`, xLeft, 250);
-    ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 285);
+    const xLeft = 40;
+    setFont(18, true);
+    ctx.fillText(`เลขที่อ้างอิง : ${student.refNo}`, xLeft, 170);
+    ctx.fillText(`ผู้ถือกรมธรรม์ : ${student.schoolName}`, xLeft, 205);
+    ctx.fillText(`ระดับการศึกษา : ${student.gradeLevel}`, xLeft, 240);
+    ctx.fillText(`ชื่อผู้เอาประกัน : ${fullName(student)}`, xLeft, 275);
+    ctx.fillText(`ผู้บริหารโครงการ : บริษัท สยามสไมล์โบรกเกอร์ (ประเทศไทย) จำกัด`, xLeft, 310);
 
     ctx.fillStyle = "#07518c";
-    fillTextCentered(`วงเงินค่ารักษาพยาบาล : ${student.coverageLimit} บาท / ต่ออุบัติเหตุแต่ละครั้ง`, 368, 680, 27);
+    fillTextCentered(`วงเงินค่ารักษาพยาบาล : ${student.coverageLimit} บาท / ต่ออุบัติเหตุแต่ละครั้ง`, 375, 680, 27);
 
     fillTextCentered(
         `(กรณีไม่เรียกร้องผลประโยชน์ค่ารักษาพยาบาล OPD อนามัย ${student.compensationOPDClinic} บาท OPD ${student.compensationOPDHospital} บาท IPD ${student.compensationIPD} บาท/ต่ออุบัติเหตุแต่ละครั้ง)`,
         400,
         720,
-        12.5
+        13,
+        false
     );
 
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#07518c";
     ctx.textAlign = "left";
-    setFont(13, true);
+    setFont(15, true);
     fillTextCentered(
         `วันที่มีผลบังคับ : ${student.effectiveDate}    วันที่สิ้นสุด : ${student.expiryDate}`,
-        440,
+        430,
         680,
-        13
+        18
     );
 
     ctx.fillStyle = "#333333";
     ctx.textAlign = "left";
     setFont(11.5, true);
-    ctx.fillText(`บริษัทผู้รับประกัน : ${student.insurer}`, 36, 488);
+    ctx.fillText(`บริษัทผู้รับประกัน : ${student.insurer}`, 36, 484);
 };
 
 const drawCardWithFonts = async (ctx: CanvasRenderingContext2D, img: HTMLImageElement, student: Student) => {

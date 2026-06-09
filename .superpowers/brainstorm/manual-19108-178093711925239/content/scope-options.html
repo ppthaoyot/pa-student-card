@@ -1,0 +1,69 @@
+<h2>ต่อจาก task Figma บัตรประกัน PA</h2>
+<p class="subtitle">repo ตอนนี้มี implementation แล้วบางส่วน เลือกทิศทางที่อยากให้ผมทำต่อ</p>
+
+<div class="cards">
+  <div class="card" data-choice="qa-fix" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:grid;grid-template-columns:1.3fr .7fr;gap:12px;height:180px">
+        <div style="background:#f7fafc;border:1px solid #d8e6ef;border-radius:8px;padding:12px">
+          <div style="height:14px;background:#0b5f99;border-radius:2px;margin-bottom:12px"></div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px">
+            <div class="placeholder" style="height:24px"></div><div class="placeholder" style="height:24px"></div><div class="placeholder" style="height:24px"></div><div class="placeholder" style="height:24px"></div><div style="background:#079aff;border-radius:4px"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px">
+            <div style="height:18px;background:#e6f6ff"></div><div style="height:18px;background:#e6f6ff"></div><div style="height:18px;background:#e6f6ff"></div><div style="height:18px;background:#e6f6ff"></div><div style="height:18px;background:#e6f6ff"></div><div style="height:18px;background:#24b4ff"></div>
+            <div style="height:18px;background:#fff"></div><div style="height:18px;background:#fff"></div><div style="height:18px;background:#fff"></div><div style="height:18px;background:#fff"></div><div style="height:18px;background:#dff7e7"></div><div style="height:18px;background:#24b4ff"></div>
+          </div>
+        </div>
+        <div style="background:#ffffff;border:1px solid #d8e6ef;border-radius:14px;padding:14px">
+          <div style="height:20px;background:#eff8ff;border-radius:6px;margin-bottom:14px"></div>
+          <div style="height:72px;background:#dff6ff;border-radius:8px;margin-bottom:10px"></div>
+          <div style="height:48px;background:#fff;border:1px solid #d8e6ef;border-radius:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>QA + Fix ให้ตรง Figma</h3>
+      <p>รันเว็บจริง เทียบ desktop/mobile/QR/card กับ reference แล้วแก้ spacing, text, overflow, responsive และ build errors</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="finish-features" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;height:180px">
+        <div style="border:1px solid #d8e6ef;border-radius:10px;padding:12px;background:#fff">
+          <div style="height:80px;background:#d8f3ff;border-radius:8px;margin-bottom:12px"></div>
+          <div style="height:28px;background:#079aff;border-radius:6px;margin-bottom:8px"></div>
+          <div style="height:28px;background:#eef7fc;border-radius:6px"></div>
+        </div>
+        <div style="border:1px solid #d8e6ef;border-radius:10px;padding:12px;background:#fff">
+          <div style="width:86px;height:86px;margin:0 auto 12px;background:repeating-linear-gradient(45deg,#111 0 5px,#fff 5px 10px);border:8px solid #fff;box-shadow:0 0 0 1px #ddd"></div>
+          <div style="height:34px;background:#079aff;border-radius:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>ปิดฟีเจอร์ให้ครบ flow</h3>
+      <p>เก็บรายละเอียดการค้นหา, share link, download card/poster, modal QR, mock data และ error state ให้ใช้งาน end-to-end</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="figma-refresh" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="display:flex;align-items:center;justify-content:center;height:180px;background:#f7fafc;border:1px dashed #8ccff5;border-radius:10px">
+        <div style="text-align:center">
+          <div style="font-size:42px;color:#079aff;font-weight:800">Figma</div>
+          <div style="margin-top:8px;color:#5b6b78">เลือก frame แล้วดึง context ใหม่</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>กลับไปดึง Figma เพิ่ม</h3>
+      <p>ถ้าต้องการ pixel-perfect จาก frame ที่เลือกใหม่ใน Figma Desktop ผมจะอ่าน context/screenshot เพิ่มก่อนออกแบบการแก้</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p><strong>คำถาม:</strong> ให้ผมต่อแบบไหนก่อนครับ? แนะนำ <strong>QA + Fix ให้ตรง Figma</strong> เพราะโค้ดมีครบหลายหน้าแล้ว เหลือพิสูจน์ด้วย browser จริงและเก็บจุดที่หลุด</p>
+</div>
