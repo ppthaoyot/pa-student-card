@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Button, Paper, TextField, Typography, Collapse } from "@mui/material";
+import { Box, Button, Paper, TextField, Typography, Collapse, Dialog, IconButton } from "@mui/material";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import BusinessCenterOutlinedIcon from "@mui/icons-material/BusinessCenterOutlined";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -10,6 +10,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import ShareIcon from "@mui/icons-material/Share";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import CloseIcon from "@mui/icons-material/Close";
 import Swal from "sweetalert2";
 
 import { searchStudents, Student } from "../modules/_common/mockStudentData";
@@ -131,6 +133,7 @@ const drawCardToCanvas = (student: Student, onComplete: () => void) => {
 
 const CardPreview = ({ student }: { student: Student }) => {
     const [imgSrc, setImgSrc] = useState<string>("");
+    const [zoomOpen, setZoomOpen] = useState(false);
 
     useEffect(() => {
         const img = new Image();
@@ -150,29 +153,155 @@ const CardPreview = ({ student }: { student: Student }) => {
     }, [student]);
 
     return (
-        <Box
-            sx={{
-                width: "100%",
-                maxWidth: 510,
-                borderRadius: "8px",
-                overflow: "hidden",
-                bgcolor: "#FFFFFF",
-            }}
-        >
-            {imgSrc ? (
-                <img
-                    src={imgSrc}
-                    alt="Digital Insurance Card"
-                    style={{
-                        width: "100%",
-                        height: "auto",
-                        display: "block",
+        <>
+            {/* Card Preview with Zoom Button */}
+            <Box
+                sx={{
+                    width: "100%",
+                    maxWidth: 510,
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    bgcolor: "#FFFFFF",
+                    position: "relative",
+                    cursor: imgSrc ? "pointer" : "default",
+                }}
+                onClick={() => imgSrc && setZoomOpen(true)}
+            >
+                {imgSrc ? (
+                    <>
+                        <img
+                            src={imgSrc}
+                            alt="Digital Insurance Card"
+                            style={{
+                                width: "100%",
+                                height: "auto",
+                                display: "block",
+                            }}
+                        />
+                        {/* Zoom Overlay Button */}
+                        <Box
+                            sx={{
+                                position: "absolute",
+                                bottom: 8,
+                                right: 8,
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                bgcolor: "rgba(0, 122, 193, 0.85)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                                transition: "all 0.2s",
+                                "&:hover": {
+                                    bgcolor: "rgba(0, 122, 193, 1)",
+                                    transform: "scale(1.1)",
+                                },
+                            }}
+                        >
+                            <ZoomInIcon sx={{ color: "#FFFFFF", fontSize: 22 }} />
+                        </Box>
+                    </>
+                ) : (
+                    <Box sx={{ width: "100%", height: 0, pb: "63.36%" }} />
+                )}
+            </Box>
+
+            {/* Fullscreen Landscape Card Dialog */}
+            <Dialog
+                open={zoomOpen}
+                onClose={() => setZoomOpen(false)}
+                fullScreen
+                PaperProps={{
+                    sx: {
+                        bgcolor: "rgba(0, 0, 0, 0.92)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        p: 0,
+                        m: 0,
+                    },
+                }}
+            >
+                {/* Close Button */}
+                <IconButton
+                    onClick={() => setZoomOpen(false)}
+                    sx={{
+                        position: "fixed",
+                        top: 12,
+                        right: 12,
+                        zIndex: 10,
+                        bgcolor: "rgba(255, 255, 255, 0.15)",
+                        color: "#FFFFFF",
+                        backdropFilter: "blur(4px)",
+                        "&:hover": { bgcolor: "rgba(255, 255, 255, 0.3)" },
                     }}
-                />
-            ) : (
-                <Box sx={{ width: "100%", height: 0, pb: "63.36%" }} />
-            )}
-        </Box>
+                >
+                    <CloseIcon />
+                </IconButton>
+
+                {/* Card Image — rotated to landscape on portrait mobile */}
+                {imgSrc && (
+                    <Box
+                        sx={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            p: 1,
+                            // On portrait screens (height > width), rotate the card 90° to fill the width
+                            "@media (orientation: portrait)": {
+                                "& > img": {
+                                    transform: "rotate(90deg)",
+                                    maxWidth: "100vh",
+                                    maxHeight: "100vw",
+                                    width: "auto",
+                                    height: "auto",
+                                },
+                            },
+                            // On landscape screens, just fill normally
+                            "@media (orientation: landscape)": {
+                                "& > img": {
+                                    maxWidth: "100%",
+                                    maxHeight: "100%",
+                                    width: "auto",
+                                    height: "auto",
+                                },
+                            },
+                        }}
+                    >
+                        <img
+                            src={imgSrc}
+                            alt="Digital Insurance Card Fullscreen"
+                            style={{
+                                display: "block",
+                                objectFit: "contain",
+                                borderRadius: "8px",
+                                boxShadow: "0 4px 30px rgba(0,0,0,0.5)",
+                            }}
+                        />
+                    </Box>
+                )}
+
+                {/* Hint Text */}
+                <Typography
+                    sx={{
+                        position: "fixed",
+                        bottom: 16,
+                        left: 0,
+                        right: 0,
+                        textAlign: "center",
+                        color: "rgba(255,255,255,0.5)",
+                        fontSize: "12px",
+                        fontWeight: 500,
+                        pointerEvents: "none",
+                    }}
+                >
+                    แตะที่ใดก็ได้เพื่อปิด
+                </Typography>
+            </Dialog>
+        </>
     );
 };
 
